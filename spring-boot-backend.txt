@@ -1,0 +1,816 @@
+
+# Hướng dẫn xây dựng Backend bằng Spring Boot cho Spa Management System
+
+## 1. Yêu cầu hệ thống
+
+- Java Development Kit (JDK) phiên bản 17 trở lên
+- Maven hoặc Gradle
+- IDE: IntelliJ IDEA hoặc Eclipse
+- MySQL/PostgreSQL cho cơ sở dữ liệu
+- Postman để kiểm thử API
+
+## 2. Cấu trúc dự án Spring Boot
+
+```
+spa-management-backend/
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   └── com/
+│   │   │       └── spa/
+│   │   │           ├── controller/
+│   │   │           ├── dto/
+│   │   │           ├── entity/
+│   │   │           ├── exception/
+│   │   │           ├── repository/
+│   │   │           ├── security/
+│   │   │           ├── service/
+│   │   │           └── SpaManagementApplication.java
+│   │   └── resources/
+│   │       ├── application.properties
+│   │       ├── application-dev.properties
+│   │       └── application-prod.properties
+│   └── test/
+└── pom.xml (hoặc build.gradle)
+```
+
+## 3. Các module chính
+
+### 3.1. Quản lý người dùng (User Management)
+- **Entity**: User, Role, Permission
+- **API**: Đăng ký, đăng nhập, quản lý quyền, quản lý profile
+
+### 3.2. Quản lý dịch vụ (Service Management)
+- **Entity**: Service, ServiceCategory
+- **API**: CRUD dịch vụ, danh mục dịch vụ
+
+### 3.3. Quản lý nhân viên (Staff Management)
+- **Entity**: Staff, Specialist, Schedule
+- **API**: CRUD nhân viên, lịch làm việc
+
+### 3.4. Quản lý đặt lịch (Booking Management)
+- **Entity**: Booking, BookingDetail, BookingStatus
+- **API**: Đặt lịch, hủy lịch, cập nhật trạng thái
+
+### 3.5. Quản lý thanh toán (Payment Management)
+- **Entity**: Transaction, Payment, PaymentMethod
+- **API**: Xử lý thanh toán, lịch sử giao dịch
+
+### 3.6. Quản lý Blog
+- **Entity**: Blog, BlogCategory, Tag
+- **API**: CRUD blog, phân loại, tìm kiếm
+
+## 4. Cấu hình Spring Boot
+
+### 4.1. Dependencies cần thiết (pom.xml)
+
+```xml
+<dependencies>
+    <!-- Spring Boot Starter -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+    
+    <!-- JWT -->
+    <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-api</artifactId>
+        <version>0.11.5</version>
+    </dependency>
+    <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-impl</artifactId>
+        <version>0.11.5</version>
+    </dependency>
+    <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-jackson</artifactId>
+        <version>0.11.5</version>
+    </dependency>
+    
+    <!-- Database -->
+    <dependency>
+        <groupId>com.mysql</groupId>
+        <artifactId>mysql-connector-j</artifactId>
+        <scope>runtime</scope>
+    </dependency>
+    
+    <!-- Swagger OpenAPI -->
+    <dependency>
+        <groupId>org.springdoc</groupId>
+        <artifactId>springdoc-openapi-ui</artifactId>
+        <version>1.6.15</version>
+    </dependency>
+    
+    <!-- Utils -->
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <optional>true</optional>
+    </dependency>
+    <dependency>
+        <groupId>org.modelmapper</groupId>
+        <artifactId>modelmapper</artifactId>
+        <version>3.1.1</version>
+    </dependency>
+    
+    <!-- Mail -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-mail</artifactId>
+    </dependency>
+    
+    <!-- Testing -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.security</groupId>
+        <artifactId>spring-security-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+    
+    <!-- Export Excel/PDF -->
+    <dependency>
+        <groupId>org.apache.poi</groupId>
+        <artifactId>poi-ooxml</artifactId>
+        <version>5.2.3</version>
+    </dependency>
+    <dependency>
+        <groupId>com.itextpdf</groupId>
+        <artifactId>itextpdf</artifactId>
+        <version>5.5.13.3</version>
+    </dependency>
+</dependencies>
+```
+
+### 4.2. Cấu hình application.properties
+
+```properties
+# Database Configuration
+spring.datasource.url=jdbc:mysql://localhost:3306/spa_management?createDatabaseIfNotExist=true
+spring.datasource.username=root
+spring.datasource.password=password
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
+
+# Server Configuration
+server.port=8080
+server.servlet.context-path=/api
+
+# JWT Configuration
+jwt.secret=yourSecretKey
+jwt.expiration=86400000
+
+# File Upload Configuration
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
+upload.dir=uploads/
+
+# Email Configuration
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=your-email@gmail.com
+spring.mail.password=your-app-password
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+# Logging Configuration
+logging.level.org.springframework.web=INFO
+logging.level.org.hibernate=ERROR
+logging.level.com.spa=DEBUG
+```
+
+## 5. Mô hình Entity chính
+
+### 5.1. User Entity
+
+```java
+@Entity
+@Table(name = "users")
+@Data
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(nullable = false, unique = true)
+    private String username;
+    
+    @Column(nullable = false)
+    private String password;
+    
+    @Column(nullable = false, unique = true)
+    private String email;
+    
+    private String fullName;
+    private String phone;
+    private String address;
+    private String profileImage;
+    
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "user_roles",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private Set<Role> roles = new HashSet<>();
+    
+    @Column(name = "created_at")
+    private Date createdAt;
+    
+    @Column(name = "updated_at")
+    private Date updatedAt;
+    
+    @PrePersist
+    protected void onCreate() {
+        createdAt = new Date();
+        updatedAt = new Date();
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = new Date();
+    }
+}
+```
+
+### 5.2. Service Entity
+
+```java
+@Entity
+@Table(name = "services")
+@Data
+public class Service {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(nullable = false)
+    private String name;
+    
+    private String description;
+    private String image;
+    
+    @Column(nullable = false)
+    private BigDecimal price;
+    
+    private Integer duration; // in minutes
+    
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    private ServiceCategory category;
+    
+    private boolean active = true;
+    
+    @Column(name = "created_at")
+    private Date createdAt;
+    
+    @Column(name = "updated_at")
+    private Date updatedAt;
+    
+    @PrePersist
+    protected void onCreate() {
+        createdAt = new Date();
+        updatedAt = new Date();
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = new Date();
+    }
+}
+```
+
+### 5.3. Booking Entity
+
+```java
+@Entity
+@Table(name = "bookings")
+@Data
+public class Booking {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(nullable = false, unique = true)
+    private String bookingCode;
+    
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+    
+    @Column(nullable = false)
+    private Date bookingDate;
+    
+    @Column(nullable = false)
+    private String timeSlot;
+    
+    @ManyToOne
+    @JoinColumn(name = "specialist_id")
+    private Staff specialist;
+    
+    @Enumerated(EnumType.STRING)
+    private BookingStatus status;
+    
+    private String notes;
+    
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL)
+    private List<BookingDetail> bookingDetails = new ArrayList<>();
+    
+    @Column(name = "created_at")
+    private Date createdAt;
+    
+    @Column(name = "updated_at")
+    private Date updatedAt;
+    
+    @PrePersist
+    protected void onCreate() {
+        this.bookingCode = generateBookingCode();
+        createdAt = new Date();
+        updatedAt = new Date();
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = new Date();
+    }
+    
+    private String generateBookingCode() {
+        // Logic to generate unique booking code
+        return "BK" + System.currentTimeMillis();
+    }
+}
+```
+
+### 5.4. Transaction Entity
+
+```java
+@Entity
+@Table(name = "transactions")
+@Data
+public class Transaction {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(nullable = false, unique = true)
+    private String transactionCode;
+    
+    @ManyToOne
+    @JoinColumn(name = "booking_id")
+    private Booking booking;
+    
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+    
+    @Column(nullable = false)
+    private BigDecimal amount;
+    
+    @Enumerated(EnumType.STRING)
+    private PaymentMethod paymentMethod;
+    
+    @Enumerated(EnumType.STRING)
+    private TransactionStatus status;
+    
+    private String paymentDetails;
+    
+    @Column(name = "transaction_date")
+    private Date transactionDate;
+    
+    @Column(name = "created_at")
+    private Date createdAt;
+    
+    @Column(name = "updated_at")
+    private Date updatedAt;
+    
+    @PrePersist
+    protected void onCreate() {
+        this.transactionCode = generateTransactionCode();
+        transactionDate = new Date();
+        createdAt = new Date();
+        updatedAt = new Date();
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = new Date();
+    }
+    
+    private String generateTransactionCode() {
+        // Logic to generate unique transaction code
+        return "TX" + System.currentTimeMillis();
+    }
+}
+```
+
+## 6. API Controllers
+
+### 6.1. AuthController
+
+```java
+@RestController
+@RequestMapping("/auth")
+@CrossOrigin
+public class AuthController {
+    @Autowired
+    private AuthService authService;
+    
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+        return authService.login(request);
+    }
+    
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
+        return authService.register(request);
+    }
+    
+    @PostMapping("/refresh-token")
+    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest request) {
+        return authService.refreshToken(request);
+    }
+    
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        return authService.forgotPassword(request);
+    }
+    
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        return authService.resetPassword(request);
+    }
+}
+```
+
+### 6.2. UserController
+
+```java
+@RestController
+@RequestMapping("/users")
+@CrossOrigin
+public class UserController {
+    @Autowired
+    private UserService userService;
+    
+    @GetMapping("/profile")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> getUserProfile() {
+        return userService.getCurrentUserProfile();
+    }
+    
+    @PutMapping("/profile")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> updateUserProfile(@Valid @RequestBody UpdateProfileRequest request) {
+        return userService.updateUserProfile(request);
+    }
+    
+    @PutMapping("/change-password")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        return userService.changePassword(request);
+    }
+    
+    @PostMapping("/upload-avatar")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> uploadAvatar(@RequestParam("file") MultipartFile file) {
+        return userService.uploadAvatar(file);
+    }
+    
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getAllUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search) {
+        return userService.getAllUsers(page, size, search);
+    }
+    
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+        return userService.getUserById(id);
+    }
+    
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody UpdateUserRequest request) {
+        return userService.updateUser(id, request);
+    }
+    
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+        return userService.deleteUser(id);
+    }
+}
+```
+
+### 6.3. BookingController
+
+```java
+@RestController
+@RequestMapping("/bookings")
+@CrossOrigin
+public class BookingController {
+    @Autowired
+    private BookingService bookingService;
+    
+    @PostMapping
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> createBooking(@Valid @RequestBody CreateBookingRequest request) {
+        return bookingService.createBooking(request);
+    }
+    
+    @GetMapping
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> getUserBookings(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String status) {
+        return bookingService.getCurrentUserBookings(page, size, status);
+    }
+    
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getAllBookings(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String date,
+            @RequestParam(required = false) String search) {
+        return bookingService.getAllBookings(page, size, status, date, search);
+    }
+    
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> getBookingById(@PathVariable Long id) {
+        return bookingService.getBookingById(id);
+    }
+    
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateBookingStatus(@PathVariable Long id, @RequestBody UpdateBookingStatusRequest request) {
+        return bookingService.updateBookingStatus(id, request);
+    }
+    
+    @PutMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> cancelBooking(@PathVariable Long id) {
+        return bookingService.cancelBooking(id);
+    }
+    
+    @GetMapping("/slots")
+    public ResponseEntity<?> getAvailableTimeSlots(
+            @RequestParam String date,
+            @RequestParam(required = false) Long specialistId) {
+        return bookingService.getAvailableTimeSlots(date, specialistId);
+    }
+}
+```
+
+### 6.4. TransactionController
+
+```java
+@RestController
+@RequestMapping("/transactions")
+@CrossOrigin
+public class TransactionController {
+    @Autowired
+    private TransactionService transactionService;
+    
+    @GetMapping
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> getUserTransactions(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return transactionService.getCurrentUserTransactions(page, size);
+    }
+    
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getAllTransactions(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate,
+            @RequestParam(required = false) String search) {
+        return transactionService.getAllTransactions(page, size, status, fromDate, toDate, search);
+    }
+    
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> getTransactionById(@PathVariable Long id) {
+        return transactionService.getTransactionById(id);
+    }
+    
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> createTransaction(@Valid @RequestBody CreateTransactionRequest request) {
+        return transactionService.createTransaction(request);
+    }
+    
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateTransactionStatus(@PathVariable Long id, @RequestBody UpdateTransactionStatusRequest request) {
+        return transactionService.updateTransactionStatus(id, request);
+    }
+    
+    @GetMapping("/export/excel")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> exportToExcel(
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate,
+            @RequestParam(required = false) String status) {
+        return transactionService.exportToExcel(fromDate, toDate, status);
+    }
+    
+    @GetMapping("/export/pdf")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> exportToPdf(
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate,
+            @RequestParam(required = false) String status) {
+        return transactionService.exportToPdf(fromDate, toDate, status);
+    }
+}
+```
+
+## 7. Security Configuration
+
+```java
+@Configuration
+@EnableWebSecurity
+@EnableGlobalMethodSecurity(prePostEnabled = true)
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+    @Autowired
+    private UserDetailsServiceImpl userDetailsService;
+    
+    @Autowired
+    private JwtAuthenticationEntryPoint unauthorizedHandler;
+    
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter();
+    }
+    
+    @Override
+    public void configure(AuthenticationManagerBuilder authenticationManagerBuilder) throws Exception {
+        authenticationManagerBuilder
+                .userDetailsService(userDetailsService)
+                .passwordEncoder(passwordEncoder());
+    }
+    
+    @Bean
+    @Override
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return super.authenticationManagerBean();
+    }
+    
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+    
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+            .cors().and().csrf().disable()
+            .exceptionHandling().authenticationEntryPoint(unauthorizedHandler).and()
+            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
+            .authorizeRequests()
+            .antMatchers("/api/auth/**").permitAll()
+            .antMatchers("/api/services/**").permitAll()
+            .antMatchers("/api/blog/**").permitAll()
+            .antMatchers("/api/specialists/**").permitAll()
+            .antMatchers("/api/bookings/slots").permitAll()
+            .antMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+            .anyRequest().authenticated();
+        
+        http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+    }
+    
+    @Bean
+    public CorsFilter corsFilter() {
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowCredentials(true);
+        config.addAllowedOrigin("*");
+        config.addAllowedHeader("*");
+        config.addAllowedMethod("*");
+        source.registerCorsConfiguration("/**", config);
+        return new CorsFilter(source);
+    }
+}
+```
+
+## 8. OpenAPI (Swagger) Configuration
+
+```java
+@Configuration
+public class OpenApiConfig {
+    @Bean
+    public OpenAPI openAPI() {
+        return new OpenAPI()
+                .info(new Info()
+                        .title("Spa Management System API")
+                        .description("API documentation for Spa Management System")
+                        .version("1.0")
+                        .contact(new Contact()
+                                .name("Your Name")
+                                .email("your.email@example.com")))
+                .addSecurityItem(new SecurityRequirement().addList("Bearer"))
+                .components(new Components()
+                        .addSecuritySchemes("Bearer",
+                                new SecurityScheme()
+                                        .name("Bearer")
+                                        .type(SecurityScheme.Type.HTTP)
+                                        .scheme("bearer")
+                                        .bearerFormat("JWT")
+                                        .in(SecurityScheme.In.HEADER)));
+    }
+}
+```
+
+## 9. Triển khai và đóng gói
+
+### 9.1. Build project với Maven
+
+```bash
+mvn clean package -DskipTests
+```
+
+### 9.2. Chạy ứng dụng
+
+```bash
+java -jar target/spa-management-backend-0.0.1-SNAPSHOT.jar
+```
+
+### 9.3. Docker (tùy chọn)
+
+```dockerfile
+FROM openjdk:17-jdk-slim
+WORKDIR /app
+COPY target/spa-management-backend-0.0.1-SNAPSHOT.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
+```
+
+## 10. Kết nối với Frontend React
+
+Hãy đảm bảo rằng đường dẫn API của Spring Boot và React khớp nhau. Frontend React sẽ gọi API từ backend Spring Boot thông qua các HTTP requests (có thể sử dụng Axios, Fetch API).
+
+Ví dụ kết nối trong React:
+
+```javascript
+// Trong React
+import axios from 'axios';
+
+const API_URL = 'http://localhost:8080/api';
+
+axios.get(`${API_URL}/services`, {
+  headers: {
+    'Authorization': `Bearer ${localStorage.getItem('token')}`
+  }
+})
+  .then(response => {
+    console.log(response.data);
+  })
+  .catch(error => {
+    console.error('Error fetching services', error);
+  });
+```
+
+## 11. Bảo mật và hiệu suất
+
+1. Sử dụng HTTPS cho production
+2. Thiết lập Rate Limiting
+3. Sử dụng caching với Redis hoặc Caffeine
+4. Thiết lập Logging và Monitoring
+5. Thực hiện Connection Pooling cho database
+6. Sử dụng Spring Profiles cho các môi trường khác nhau
+
+## 12. Kiểm thử
+
+1. Unit testing với JUnit và Mockito
+2. Integration testing
+3. Kiểm thử API với Postman hoặc REST Assured
+4. Kiểm thử bảo mật

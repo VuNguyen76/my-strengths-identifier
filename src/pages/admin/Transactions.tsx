@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Card, 
@@ -45,6 +44,7 @@ import { format, isWithinInterval, parseISO } from "date-fns";
 import * as XLSX from 'xlsx';
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { DateRange } from "react-day-picker";
 
 const transactionsData = [
   {
@@ -153,10 +153,7 @@ const Transactions = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage] = useState(1);
-  const [dateRange, setDateRange] = useState<{
-    from: Date | undefined;
-    to: Date | undefined;
-  }>({
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: undefined,
     to: undefined,
   });
@@ -180,7 +177,7 @@ const Transactions = () => {
 
       // Apply date filter
       let matchesDate = true;
-      if (dateRange.from && dateRange.to) {
+      if (dateRange?.from && dateRange?.to) {
         const transactionDate = parseISO(transaction.date);
         matchesDate = isWithinInterval(transactionDate, {
           start: dateRange.from,
@@ -253,7 +250,7 @@ const Transactions = () => {
 
   // Apply date filter
   const handleDateRangeApply = () => {
-    if (dateRange.from && dateRange.to) {
+    if (dateRange?.from && dateRange?.to) {
       toast.success(`Đã lọc giao dịch từ ${format(dateRange.from, "dd/MM/yyyy")} đến ${format(dateRange.to, "dd/MM/yyyy")}`);
     }
   };
@@ -278,7 +275,7 @@ const Transactions = () => {
             <PopoverTrigger asChild>
               <Button variant="outline">
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateRange.from && dateRange.to ? (
+                {dateRange?.from && dateRange?.to ? (
                   <>
                     {format(dateRange.from, "dd/MM/yyyy")} -{" "}
                     {format(dateRange.to, "dd/MM/yyyy")}
@@ -298,7 +295,7 @@ const Transactions = () => {
                 className={cn("p-3 pointer-events-auto")}
               />
               <div className="flex items-center p-3 border-t border-border">
-                {dateRange.from && dateRange.to && (
+                {dateRange?.from && dateRange?.to && (
                   <Button 
                     variant="ghost" 
                     size="sm" 
