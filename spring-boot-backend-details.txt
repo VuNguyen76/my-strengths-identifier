@@ -1,0 +1,491 @@
+
+# SPRING BOOT BACKEND IMPLEMENTATION DETAILS
+
+## Technology Stack
+
+- Spring Boot 3.2.x
+- Java 17+
+- Spring Security with JWT Authentication
+- Spring Data JPA
+- PostgreSQL Database
+- Maven for dependency management
+- Docker for containerization
+- Swagger for API documentation
+
+## Backend Structure
+
+```
+src/
+├── main/
+│   ├── java/com/spa/
+│   │   ├── config/          # Configuration classes
+│   │   ├── controller/      # REST controllers
+│   │   ├── dto/             # Data Transfer Objects
+│   │   ├── exception/       # Custom exceptions
+│   │   ├── mapper/          # Object mappers
+│   │   ├── model/           # Entity models
+│   │   ├── repository/      # Data repositories
+│   │   ├── security/        # Security configuration
+│   │   ├── service/         # Business logic
+│   │   └── util/            # Utility classes
+│   └── resources/
+│       ├── application.yml  # Application configuration
+│       ├── data.sql         # Initial data setup
+│       └── schema.sql       # Database schema
+├── test/                    # Test classes
+```
+
+## Database Model
+
+### Entity Relationships
+
+1. **User Entity**
+   - One-to-Many with Booking
+   - One-to-Many with Payment
+   - Many-to-Many with Role
+
+2. **Service Entity**
+   - Many-to-One with ServiceCategory
+   - Many-to-Many with Booking
+
+3. **Specialist Entity**
+   - Many-to-One with User
+   - One-to-Many with Booking
+   - Many-to-Many with Service (specialties)
+
+4. **Booking Entity**
+   - Many-to-One with User
+   - Many-to-One with Specialist
+   - Many-to-Many with Service
+   - One-to-One with Payment
+
+5. **ServiceCategory Entity**
+   - One-to-Many with Service
+
+6. **Payment Entity**
+   - Many-to-One with User
+   - One-to-One with Booking
+
+7. **Blog Entity**
+   - Many-to-One with User (author)
+   - Many-to-One with BlogCategory
+
+## API Endpoints
+
+### Authentication API
+- POST /api/auth/register - Register a new user
+- POST /api/auth/login - Authenticate a user
+- POST /api/auth/refresh-token - Refresh authentication token
+- POST /api/auth/logout - Logout current user
+
+### User API
+- GET /api/users - Get all users (admin only)
+- GET /api/users/{id} - Get user by ID
+- GET /api/users/me - Get current user info
+- PUT /api/users/{id} - Update user
+- DELETE /api/users/{id} - Delete user
+- GET /api/users/dashboard - Get user dashboard data
+
+### Service API
+- GET /api/services - Get all services
+- GET /api/services/{id} - Get service by ID
+- POST /api/services - Create new service (admin only)
+- PUT /api/services/{id} - Update service (admin only)
+- DELETE /api/services/{id} - Delete service (admin only)
+- GET /api/services/categories - Get all service categories
+
+### Specialist API
+- GET /api/specialists - Get all specialists
+- GET /api/specialists/{id} - Get specialist by ID
+- POST /api/specialists - Create new specialist (admin only)
+- PUT /api/specialists/{id} - Update specialist (admin only)
+- DELETE /api/specialists/{id} - Delete specialist (admin only)
+- GET /api/specialists/{id}/schedule - Get specialist schedule
+- PUT /api/specialists/{id}/schedule - Update specialist schedule
+
+### Booking API
+- GET /api/bookings - Get all bookings (filtered by user role)
+- GET /api/bookings/{id} - Get booking by ID
+- POST /api/bookings - Create new booking
+- PUT /api/bookings/{id} - Update booking status
+- DELETE /api/bookings/{id} - Cancel booking
+- GET /api/bookings/availability - Check availability for booking
+
+### Payment API
+- GET /api/payments - Get all payments (admin only)
+- GET /api/payments/{id} - Get payment by ID
+- POST /api/payments - Create new payment
+- PUT /api/payments/{id} - Update payment status
+- GET /api/payments/user/{userId} - Get payments by user
+
+### Blog API
+- GET /api/blogs - Get all blogs
+- GET /api/blogs/{id} - Get blog by ID
+- POST /api/blogs - Create new blog (admin only)
+- PUT /api/blogs/{id} - Update blog (admin only)
+- DELETE /api/blogs/{id} - Delete blog (admin only)
+- GET /api/blogs/categories - Get all blog categories
+
+### Reports API (Admin only)
+- GET /api/reports/revenue - Get revenue reports
+- GET /api/reports/bookings - Get booking reports
+- GET /api/reports/services - Get service popularity reports
+- GET /api/reports/specialists - Get specialist performance reports
+
+## Security Implementation
+
+1. **JWT Authentication**
+   - JSON Web Token based authentication
+   - Token-based stateless authentication
+   - Refresh token mechanism
+
+2. **Role-based Access Control**
+   - User roles: USER, STAFF, ADMIN
+   - Method-level security with @PreAuthorize
+   - Custom permission evaluators
+
+3. **Password Security**
+   - BCrypt password encoding
+   - Password validation rules
+   - Account lockout after failed attempts
+
+## Service Layer Implementation
+
+### UserService
+- User registration and profile management
+- Password reset functionality
+- User role management
+
+### BookingService
+- Booking creation and management
+- Availability checking
+- Email/SMS notifications for bookings
+
+### SpecialistService
+- Specialist profile management
+- Schedule management
+- Service assignment
+
+### PaymentService
+- Payment processing
+- Invoice generation
+- Payment status tracking
+
+### ReportService
+- Revenue reporting
+- Service usage analytics
+- Customer demographics
+
+## Database Schema
+
+```sql
+-- Users table
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(255),
+    phone VARCHAR(20),
+    role VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Service categories table
+CREATE TABLE service_categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Services table
+CREATE TABLE services (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    price DECIMAL(10, 2) NOT NULL,
+    duration INT NOT NULL, -- Duration in minutes
+    category_id INT REFERENCES service_categories(id),
+    image_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Specialists table
+CREATE TABLE specialists (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id),
+    role VARCHAR(255) NOT NULL,
+    experience VARCHAR(255),
+    bio TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Specialist schedules table
+CREATE TABLE specialist_schedules (
+    id SERIAL PRIMARY KEY,
+    specialist_id INT REFERENCES specialists(id),
+    day_of_week INT NOT NULL, -- 1-7 for Monday-Sunday
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Specialist services (many-to-many)
+CREATE TABLE specialist_services (
+    specialist_id INT REFERENCES specialists(id),
+    service_id INT REFERENCES services(id),
+    PRIMARY KEY (specialist_id, service_id)
+);
+
+-- Bookings table
+CREATE TABLE bookings (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id),
+    specialist_id INT REFERENCES specialists(id),
+    date DATE NOT NULL,
+    time TIME NOT NULL,
+    status VARCHAR(20) NOT NULL, -- pending, confirmed, completed, canceled
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Booking services (many-to-many)
+CREATE TABLE booking_services (
+    booking_id INT REFERENCES bookings(id),
+    service_id INT REFERENCES services(id),
+    PRIMARY KEY (booking_id, service_id)
+);
+
+-- Payments table
+CREATE TABLE payments (
+    id SERIAL PRIMARY KEY,
+    booking_id INT UNIQUE REFERENCES bookings(id),
+    amount DECIMAL(10, 2) NOT NULL,
+    payment_method VARCHAR(50),
+    status VARCHAR(20) NOT NULL, -- pending, completed, failed, refunded
+    transaction_id VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Blog categories table
+CREATE TABLE blog_categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Blogs table
+CREATE TABLE blogs (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    author_id INT REFERENCES users(id),
+    category_id INT REFERENCES blog_categories(id),
+    image_url VARCHAR(255),
+    published_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+## Integration with Frontend
+
+1. **API Communication**
+   - RESTful API endpoints
+   - JSON data format
+   - HTTP status codes for error handling
+
+2. **Cors Configuration**
+   ```java
+   @Configuration
+   public class CorsConfig {
+       @Bean
+       public CorsFilter corsFilter() {
+           UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+           CorsConfiguration config = new CorsConfiguration();
+           config.setAllowCredentials(true);
+           config.addAllowedOrigin("http://localhost:5173"); // Frontend URL
+           config.addAllowedHeader("*");
+           config.addAllowedMethod("*");
+           source.registerCorsConfiguration("/**", config);
+           return new CorsFilter(source);
+       }
+   }
+   ```
+
+3. **Error Handling**
+   - Consistent error response format
+   - Detailed error messages
+   - HTTP status codes
+
+## Deployment
+
+1. **Docker Containerization**
+   ```dockerfile
+   FROM openjdk:17-jdk-slim
+   WORKDIR /app
+   COPY target/spa-management-0.0.1-SNAPSHOT.jar app.jar
+   EXPOSE 8080
+   ENTRYPOINT ["java","-jar","app.jar"]
+   ```
+
+2. **Docker Compose Setup**
+   ```yaml
+   version: '3'
+   services:
+     app:
+       build: .
+       ports:
+         - "8080:8080"
+       depends_on:
+         - db
+       environment:
+         - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/spa_db
+         - SPRING_DATASOURCE_USERNAME=postgres
+         - SPRING_DATASOURCE_PASSWORD=postgres
+     
+     db:
+       image: postgres:14
+       ports:
+         - "5432:5432"
+       environment:
+         - POSTGRES_DB=spa_db
+         - POSTGRES_USER=postgres
+         - POSTGRES_PASSWORD=postgres
+       volumes:
+         - postgres_data:/var/lib/postgresql/data
+   
+   volumes:
+     postgres_data:
+   ```
+
+3. **Deployment Options**
+   - Local development environment
+   - Docker containers for consistent deployment
+   - Cloud hosting (AWS, Google Cloud, Azure)
+   - CI/CD pipeline with GitHub Actions
+
+## Testing Strategy
+
+1. **Unit Testing**
+   - JUnit 5 for unit tests
+   - Mockito for mocking dependencies
+   - Test coverage for service layer
+
+2. **Integration Testing**
+   - Testing API endpoints
+   - Database integration tests
+   - Authentication tests
+
+3. **Performance Testing**
+   - Load testing with JMeter
+   - Response time measurement
+   - Resource utilization monitoring
+
+## Monitoring and Logging
+
+1. **Logging Configuration**
+   - SLF4J with Logback
+   - Different log levels (INFO, ERROR, DEBUG)
+   - Structured logging format
+
+2. **Monitoring**
+   - Spring Boot Actuator for health checks
+   - Prometheus for metrics collection
+   - Grafana for visualization
+
+## Recommended Spring Boot Dependencies
+
+```xml
+<dependencies>
+    <!-- Spring Boot Starter -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    
+    <!-- Database -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+        <scope>runtime</scope>
+    </dependency>
+    
+    <!-- Security -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-api</artifactId>
+        <version>0.11.5</version>
+    </dependency>
+    <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-impl</artifactId>
+        <version>0.11.5</version>
+        <scope>runtime</scope>
+    </dependency>
+    <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-jackson</artifactId>
+        <version>0.11.5</version>
+        <scope>runtime</scope>
+    </dependency>
+    
+    <!-- Validation -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+    
+    <!-- API Documentation -->
+    <dependency>
+        <groupId>org.springdoc</groupId>
+        <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        <version>2.2.0</version>
+    </dependency>
+    
+    <!-- Utils -->
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <optional>true</optional>
+    </dependency>
+    <dependency>
+        <groupId>org.modelmapper</groupId>
+        <artifactId>modelmapper</artifactId>
+        <version>3.1.1</version>
+    </dependency>
+    
+    <!-- Testing -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.security</groupId>
+        <artifactId>spring-security-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>com.h2database</groupId>
+        <artifactId>h2</artifactId>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
+```

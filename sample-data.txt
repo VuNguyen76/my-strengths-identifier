@@ -240,3 +240,376 @@ interface BookingData {
   customerEmail?: string;
 }
 ```
+
+## Admin Dashboard Sample Data
+```javascript
+// Sample data for the admin dashboard
+const adminDashboardData = {
+  stats: [
+    { title: "Lịch hẹn hôm nay", value: 12, change: "+20%", icon: "Calendar" },
+    { title: "Tổng doanh thu", value: "28,5M VND", change: "+15%", icon: "CreditCard" },
+    { title: "Khách hàng mới", value: 54, change: "+12%", icon: "User" },
+    { title: "Tỉ lệ hoàn thành", value: "94%", change: "+2%", icon: "CheckCircle" },
+  ],
+  recentBookings: [
+    { id: 1, customerName: "Nguyễn Văn A", service: "Chăm sóc da cơ bản", date: "2023-07-15T09:00:00", status: "Đang chờ" },
+    { id: 2, customerName: "Trần Thị B", service: "Trị mụn chuyên sâu", date: "2023-07-15T10:00:00", status: "Đã xác nhận" },
+    { id: 3, customerName: "Lê Văn C", service: "Trẻ hóa da", date: "2023-07-15T11:00:00", status: "Đang chờ" },
+    { id: 4, customerName: "Phạm Thị D", service: "Massage mặt", date: "2023-07-15T14:00:00", status: "Đã xác nhận" },
+    { id: 5, customerName: "Hoàng Văn E", service: "Tẩy trang chuyên sâu", date: "2023-07-15T15:00:00", status: "Đã hủy" },
+  ],
+  revenueData: [
+    { month: "Tháng 1", revenue: 15000000 },
+    { month: "Tháng 2", revenue: 18000000 },
+    { month: "Tháng 3", revenue: 22000000 },
+    { month: "Tháng 4", revenue: 20000000 },
+    { month: "Tháng 5", revenue: 25000000 },
+    { month: "Tháng 6", revenue: 28000000 },
+    { month: "Tháng 7", revenue: 30000000 },
+  ],
+  popularServices: [
+    { name: "Trị mụn chuyên sâu", bookings: 125, revenue: 81250000 },
+    { name: "Chăm sóc da cơ bản", bookings: 98, revenue: 44100000 },
+    { name: "Trẻ hóa da", bookings: 75, revenue: 63750000 },
+    { name: "Massage mặt", bookings: 65, revenue: 22750000 },
+  ]
+};
+```
+
+## User Settings Data Model
+```typescript
+// Sample data for user settings
+interface UserSettings {
+  notifications: {
+    email: boolean;
+    sms: boolean;
+    app: boolean;
+  };
+  preferences: {
+    language: "vi" | "en";
+    appointmentReminders: boolean;
+    newsletterSubscription: boolean;
+  };
+  privacySettings: {
+    shareProfileWithSpecialists: boolean;
+    allowReviews: boolean;
+  };
+}
+```
+
+## Service Categories Data
+```javascript
+// Service categories for admin management
+const serviceCategories = [
+  { id: "1", name: "Chăm sóc da", count: 5, description: "Các dịch vụ chăm sóc làn da cơ bản" },
+  { id: "2", name: "Điều trị", count: 3, description: "Các dịch vụ điều trị các vấn đề da chuyên sâu" },
+  { id: "3", name: "Trẻ hóa", count: 2, description: "Các dịch vụ giúp làn da trẻ trung hơn" },
+  { id: "4", name: "Massage", count: 4, description: "Các dịch vụ massage thư giãn" },
+  { id: "5", name: "Tắm trắng", count: 2, description: "Các dịch vụ làm trắng da" },
+]
+```
+
+## Staff Schedule Data
+```javascript
+// Staff weekly schedule for admin management
+const staffSchedule = [
+  {
+    staffId: "1",
+    name: "Nguyễn Thị A",
+    schedule: [
+      { day: "Thứ 2", shifts: ["09:00-12:00", "14:00-18:00"] },
+      { day: "Thứ 3", shifts: ["09:00-12:00", "14:00-18:00"] },
+      { day: "Thứ 4", shifts: ["09:00-12:00", "14:00-18:00"] },
+      { day: "Thứ 5", shifts: ["Off"] },
+      { day: "Thứ 6", shifts: ["09:00-12:00", "14:00-18:00"] },
+      { day: "Thứ 7", shifts: ["09:00-12:00"] },
+      { day: "Chủ nhật", shifts: ["Off"] },
+    ]
+  },
+  {
+    staffId: "2",
+    name: "Trần Văn B",
+    schedule: [
+      { day: "Thứ 2", shifts: ["09:00-12:00", "14:00-18:00"] },
+      { day: "Thứ 3", shifts: ["Off"] },
+      { day: "Thứ 4", shifts: ["09:00-12:00", "14:00-18:00"] },
+      { day: "Thứ 5", shifts: ["09:00-12:00", "14:00-18:00"] },
+      { day: "Thứ 6", shifts: ["09:00-12:00", "14:00-18:00"] },
+      { day: "Thứ 7", shifts: ["09:00-16:00"] },
+      { day: "Chủ nhật", shifts: ["Off"] },
+    ]
+  },
+]
+```
+
+## Transaction Data
+```javascript
+// Sample transaction data for admin reporting
+const transactions = [
+  { id: "1", date: "2023-07-15", customer: "Nguyễn Văn A", service: "Chăm sóc da cơ bản", amount: 450000, status: "Đã thanh toán", method: "Tiền mặt" },
+  { id: "2", date: "2023-07-15", customer: "Trần Thị B", service: "Trị mụn chuyên sâu", amount: 650000, status: "Đã thanh toán", method: "Thẻ tín dụng" },
+  { id: "3", date: "2023-07-14", customer: "Lê Văn C", service: "Trẻ hóa da", amount: 850000, status: "Đã thanh toán", method: "Chuyển khoản" },
+  { id: "4", date: "2023-07-14", customer: "Phạm Thị D", service: "Massage mặt", amount: 350000, status: "Đã thanh toán", method: "Tiền mặt" },
+  { id: "5", date: "2023-07-13", customer: "Hoàng Văn E", service: "Tẩy trang chuyên sâu", amount: 250000, status: "Đã hoàn tiền", method: "Thẻ tín dụng" },
+  { id: "6", date: "2023-07-13", customer: "Nguyễn Thị F", service: "Trị mụn chuyên sâu", amount: 650000, status: "Đã thanh toán", method: "Tiền mặt" },
+  { id: "7", date: "2023-07-12", customer: "Trần Văn G", service: "Chăm sóc da cơ bản", amount: 450000, status: "Đã thanh toán", method: "Chuyển khoản" },
+  { id: "8", date: "2023-07-12", customer: "Lê Thị H", service: "Trẻ hóa da", amount: 850000, status: "Đã thanh toán", method: "Thẻ tín dụng" },
+  { id: "9", date: "2023-07-11", customer: "Phạm Văn I", service: "Massage mặt", amount: 350000, status: "Đã thanh toán", method: "Tiền mặt" },
+  { id: "10", date: "2023-07-11", customer: "Hoàng Thị K", service: "Tẩy trang chuyên sâu", amount: 250000, status: "Đã thanh toán", method: "Chuyển khoản" },
+]
+```
+
+## User Dashboard Sample Data
+```javascript
+// Sample data for the user dashboard
+const userDashboardData = {
+  upcomingBookings: [
+    { id: 1, service: "Chăm sóc da cơ bản", specialist: "Nguyễn Thị Mai", date: "2023-07-15T09:00:00", status: "Đang chờ" },
+    { id: 2, service: "Trị mụn chuyên sâu", specialist: "Trần Văn Minh", date: "2023-07-22T11:00:00", status: "Đang chờ" },
+  ],
+  pastBookings: [
+    { id: 3, service: "Trẻ hóa da", specialist: "Lê Thị Hương", date: "2023-06-16T10:00:00", status: "Đã hoàn thành" },
+    { id: 4, service: "Massage mặt", specialist: "Phạm Thanh Hà", date: "2023-06-05T14:00:00", status: "Đã hoàn thành" },
+    { id: 5, service: "Tẩy trang chuyên sâu", specialist: "Ngô Quốc Anh", date: "2023-05-28T09:30:00", status: "Đã hủy" },
+  ],
+  recommendedServices: [
+    { id: 1, name: "Chăm sóc da cơ bản", price: 300000, description: "Làm sạch và dưỡng ẩm cho da" },
+    { id: 2, name: "Trị mụn chuyên sâu", price: 500000, description: "Điều trị mụn và vết thâm hiệu quả" },
+    { id: 3, name: "Massage mặt", price: 350000, description: "Thư giãn và cải thiện tuần hoàn máu" },
+  ]
+}
+```
+
+## Skin Quiz Questions Data
+```javascript
+// Sample data for skin quiz
+const skinQuizQuestions = [
+  {
+    id: 1,
+    question: "Làn da của bạn thường như thế nào vào cuối ngày?",
+    options: [
+      { id: "a", text: "Khô và căng", value: "dry" },
+      { id: "b", text: "Bóng dầu ở vùng chữ T (trán, mũi, cằm)", value: "combination" },
+      { id: "c", text: "Bóng dầu ở hầu hết các vùng", value: "oily" },
+      { id: "d", text: "Bình thường, không quá khô hay quá dầu", value: "normal" }
+    ]
+  },
+  {
+    id: 2,
+    question: "Bạn có xu hướng bị mụn không?",
+    options: [
+      { id: "a", text: "Hiếm khi hoặc không bao giờ", value: 0 },
+      { id: "b", text: "Thỉnh thoảng, đặc biệt là khi stress hoặc trong kỳ kinh nguyệt", value: 1 },
+      { id: "c", text: "Thường xuyên ở vùng chữ T", value: 2 },
+      { id: "d", text: "Thường xuyên ở hầu hết các vùng trên mặt", value: 3 }
+    ]
+  },
+  {
+    id: 3,
+    question: "Làn da của bạn có nhạy cảm không?",
+    options: [
+      { id: "a", text: "Không, da tôi hiếm khi bị kích ứng", value: 0 },
+      { id: "b", text: "Đôi khi, với một số sản phẩm nhất định", value: 1 },
+      { id: "c", text: "Có, da tôi dễ bị đỏ và kích ứng", value: 2 },
+      { id: "d", text: "Rất nhạy cảm, hầu hết các sản phẩm đều làm da tôi kích ứng", value: 3 }
+    ]
+  },
+  {
+    id: 4,
+    question: "Bạn có vấn đề gì về da muốn cải thiện?",
+    options: [
+      { id: "a", text: "Lão hóa (nếp nhăn, chảy xệ)", value: "aging" },
+      { id: "b", text: "Mụn và dầu nhờn", value: "acne" },
+      { id: "c", text: "Thâm nám, tàn nhang", value: "pigmentation" },
+      { id: "d", text: "Khô và thiếu nước", value: "dryness" },
+      { id: "e", text: "Không đều màu da", value: "uneven" }
+    ]
+  },
+  {
+    id: 5,
+    question: "Bạn dành bao nhiêu thời gian cho quy trình chăm sóc da mỗi ngày?",
+    options: [
+      { id: "a", text: "1-2 phút (chỉ rửa mặt)", value: "minimal" },
+      { id: "b", text: "5 phút (rửa mặt và dưỡng ẩm)", value: "basic" },
+      { id: "c", text: "10-15 phút (nhiều bước cơ bản)", value: "moderate" },
+      { id: "d", text: "15+ phút (quy trình chăm sóc da đầy đủ)", value: "extensive" }
+    ]
+  }
+]
+```
+
+## Quiz Results Data
+```javascript
+// Sample quiz result recommendations
+const skinQuizResults = {
+  "dry": {
+    skinType: "Da khô",
+    description: "Làn da của bạn thiếu độ ẩm và dầu tự nhiên, có thể cảm thấy căng, bong tróc hoặc thô ráp.",
+    recommendedProducts: [
+      "Sữa rửa mặt dịu nhẹ không chứa sulfate",
+      "Kem dưỡng ẩm dạng rich cream",
+      "Serum chứa hyaluronic acid",
+      "Dầu dưỡng da vào buổi tối"
+    ],
+    recommendedServices: [
+      { id: "1", name: "Chăm sóc da cơ bản", price: 450000 },
+      { id: "3", name: "Trẻ hóa da", price: 850000 }
+    ]
+  },
+  "oily": {
+    skinType: "Da dầu",
+    description: "Làn da của bạn sản xuất nhiều dầu nhờn, có thể bóng dầu và dễ bị mụn.",
+    recommendedProducts: [
+      "Sữa rửa mặt chứa salicylic acid",
+      "Kem dưỡng ẩm dạng gel không chứa dầu",
+      "Đất sét hoặc mặt nạ than hoạt tính",
+      "Toner chứa niacinamide"
+    ],
+    recommendedServices: [
+      { id: "2", name: "Trị mụn chuyên sâu", price: 650000 },
+      { id: "5", name: "Tẩy trang chuyên sâu", price: 250000 }
+    ]
+  },
+  "combination": {
+    skinType: "Da hỗn hợp",
+    description: "Làn da của bạn có vùng dầu (thường là vùng chữ T) và vùng khô (má, cằm).",
+    recommendedProducts: [
+      "Sữa rửa mặt cân bằng pH",
+      "Kem dưỡng ẩm dạng gel-cream",
+      "Serum cân bằng da",
+      "Mặt nạ đất sét cho vùng chữ T"
+    ],
+    recommendedServices: [
+      { id: "1", name: "Chăm sóc da cơ bản", price: 450000 },
+      { id: "2", name: "Trị mụn chuyên sâu", price: 650000 }
+    ]
+  },
+  "normal": {
+    skinType: "Da thường",
+    description: "Làn da của bạn cân bằng, không quá khô hay quá dầu, ít gặp vấn đề về da.",
+    recommendedProducts: [
+      "Sữa rửa mặt dịu nhẹ",
+      "Kem dưỡng ẩm cân bằng",
+      "Serum chống oxy hóa",
+      "Kem chống nắng hàng ngày"
+    ],
+    recommendedServices: [
+      { id: "1", name: "Chăm sóc da cơ bản", price: 450000 },
+      { id: "4", name: "Massage mặt", price: 350000 }
+    ]
+  }
+}
+```
+
+## Color Theme and UI Guidelines
+```javascript
+// Color palette for the SPA Management System
+const colorPalette = {
+  // Primary colors (Pink/Purple theme)
+  primary: 'hsl(330, 80%, 60%)', // Pink
+  primaryLight: 'hsl(330, 80%, 75%)',
+  primaryDark: 'hsl(330, 80%, 45%)',
+  
+  // Secondary colors
+  secondary: 'hsl(210, 40%, 96.1%)', // Light gray with blue tint
+  secondaryDark: 'hsl(210, 40%, 90%)',
+  
+  // Text colors
+  text: 'hsl(222.2, 84%, 4.9%)',  // Dark gray
+  textLight: 'hsl(215.4, 16.3%, 46.9%)', // Muted text
+  
+  // Background colors
+  background: 'hsl(0, 0%, 100%)', // White
+  backgroundAlt: 'hsl(0, 0%, 98%)', // Off-white
+  
+  // Status colors
+  success: 'hsl(142.1, 76.2%, 36.3%)', // Green
+  warning: 'hsl(38, 92%, 50%)',  // Orange
+  error: 'hsl(0, 84.2%, 60.2%)', // Red
+  info: 'hsl(221.2, 83.2%, 53.3%)' // Blue
+};
+
+// Typography guidelines
+const typography = {
+  fontFamily: 'system-ui, sans-serif',
+  fontSizes: {
+    xs: '0.75rem',   // 12px
+    sm: '0.875rem',  // 14px
+    base: '1rem',    // 16px
+    lg: '1.125rem',  // 18px
+    xl: '1.25rem',   // 20px
+    '2xl': '1.5rem', // 24px
+    '3xl': '1.875rem', // 30px
+    '4xl': '2.25rem', // 36px
+    '5xl': '3rem',   // 48px
+  },
+  fontWeights: {
+    normal: '400',
+    medium: '500',
+    semibold: '600',
+    bold: '700',
+  }
+};
+
+// Spacing system
+const spacing = {
+  px: '1px',
+  0: '0',
+  0.5: '0.125rem', // 2px
+  1: '0.25rem',    // 4px
+  1.5: '0.375rem', // 6px
+  2: '0.5rem',     // 8px
+  2.5: '0.625rem', // 10px
+  3: '0.75rem',    // 12px
+  3.5: '0.875rem', // 14px
+  4: '1rem',       // 16px
+  5: '1.25rem',    // 20px
+  6: '1.5rem',     // 24px
+  7: '1.75rem',    // 28px
+  8: '2rem',       // 32px
+  9: '2.25rem',    // 36px
+  10: '2.5rem',    // 40px
+  11: '2.75rem',   // 44px
+  12: '3rem',      // 48px
+  14: '3.5rem',    // 56px
+  16: '4rem',      // 64px
+  20: '5rem',      // 80px
+  24: '6rem',      // 96px
+  28: '7rem',      // 112px
+  32: '8rem',      // 128px
+  36: '9rem',      // 144px
+  40: '10rem',     // 160px
+  44: '11rem',     // 176px
+  48: '12rem',     // 192px
+  52: '13rem',     // 208px
+  56: '14rem',     // 224px
+  60: '15rem',     // 240px
+  64: '16rem',     // 256px
+  72: '18rem',     // 288px
+  80: '20rem',     // 320px
+  96: '24rem',     // 384px
+};
+
+// Shadow styles
+const shadows = {
+  sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+  DEFAULT: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
+  md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
+  lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
+  xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+  '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+};
+
+// Border radius
+const borderRadius = {
+  none: '0',
+  sm: '0.125rem',  // 2px
+  DEFAULT: '0.25rem', // 4px
+  md: '0.375rem',  // 6px
+  lg: '0.5rem',    // 8px
+  xl: '0.75rem',   // 12px
+  '2xl': '1rem',   // 16px
+  '3xl': '1.5rem', // 24px
+  full: '9999px',
+};
+```
