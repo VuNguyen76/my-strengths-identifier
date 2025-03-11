@@ -1,0 +1,82 @@
+
+# SPA MANAGEMENT SYSTEM - FRONTEND STRUCTURE
+
+## Project Overview
+This is a React-based front-end for a spa management system built with:
+- React 18
+- TypeScript
+- React Router for navigation
+- React Query for data fetching
+- Tailwind CSS for styling
+- Shadcn UI components
+- Zod for form validation
+
+## Directory Structure
+
+```
+src/
+├── components/       # Reusable components
+│   ├── auth/         # Authentication related components
+│   ├── booking/      # Booking related components
+│   ├── dashboard/    # Dashboard components
+│   ├── home/         # Home page components
+│   ├── layout/       # Layout components (Navbar, Footer)
+│   └── ui/           # UI components (from shadcn/ui)
+├── hooks/            # Custom hooks
+├── layouts/          # Page layouts (e.g. DashboardLayout)
+├── lib/              # Utility functions and helpers
+├── pages/            # Page components
+│   ├── admin/        # Admin pages
+│   └── user/         # User pages
+├── types/            # TypeScript type definitions
+├── App.tsx           # Main application component
+└── main.tsx          # Entry point
+```
+
+## Key Features
+
+1. **User Authentication**
+   - Login/Register pages
+   - Role-based access control (User/Staff/Admin)
+
+2. **Public Pages**
+   - Homepage with services, specialists, testimonials
+   - Services listing
+   - Specialists listing
+   - Blog/articles
+   - Skin quiz
+
+3. **Booking System**
+   - Multi-step booking process
+   - Service selection
+   - Specialist selection
+   - Date/time selection
+   - Customer information
+
+4. **User Dashboard**
+   - Overview
+   - Booking management
+   - Booking history
+   - Payment information
+   - Profile settings
+
+5. **Admin Dashboard**
+   - Overview with statistics
+   - User management
+   - Staff management
+   - Service management
+   - Booking management
+   - Transaction history
+   - Reports generation
+   - System settings
+
+## Navigation Structure
+
+- Public: Home, Services, Specialists, Blog, Booking, Login/Register
+- User Dashboard: Overview, Bookings, History, Payments, Settings
+- Admin Dashboard: Overview, Users, Staff, Services, Bookings, Transactions, Reports, Settings
+
+## Responsive Design
+- The application is fully responsive, supporting mobile, tablet, and desktop views
+- Mobile menu for small screens
+- Responsive dashboard layout with collapsible sidebar

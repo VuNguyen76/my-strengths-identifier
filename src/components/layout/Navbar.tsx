@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import Logo from "./Logo";
-import { Menu, X, User, LogOut, Shield, BookOpen } from "lucide-react";
+import { Menu, X, User, LogOut, Shield } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,9 +32,6 @@ const Navbar = () => {
         console.error("Failed to parse user data", error);
       }
     }
-    
-    // Remove any dark mode classes from the document
-    document.documentElement.classList.remove('dark');
   }, []);
   
   const toggleMenu = () => {
