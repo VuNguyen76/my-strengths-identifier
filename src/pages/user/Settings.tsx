@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -87,7 +86,6 @@ const UserSettings = () => {
     cvv: "",
   });
   
-  const [theme, setTheme] = useState("system");
   const [language, setLanguage] = useState("vi");
 
   const handleProfileChange = (key: keyof typeof profileData, value: string) => {
@@ -187,24 +185,6 @@ const UserSettings = () => {
     
     setPaymentMethods(updatedMethods);
     toast.success("Phương thức thanh toán mặc định đã được cập nhật");
-  };
-  
-  const handleThemeChange = (value: string) => {
-    setTheme(value);
-    toast.success(`Đã chuyển sang chế độ ${value === 'light' ? 'sáng' : value === 'dark' ? 'tối' : 'hệ thống'}`);
-    
-    if (value === 'light') {
-      document.documentElement.classList.remove('dark');
-    } else if (value === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      // Check system preference
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    }
   };
   
   const handleLanguageChange = (value: string) => {
@@ -591,48 +571,16 @@ const UserSettings = () => {
             <CardHeader>
               <CardTitle>Giao diện</CardTitle>
               <CardDescription>
-                Tùy chỉnh giao diện và ngôn ngữ
+                Tùy chỉnh ngôn ngữ
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <Languages className="h-5 w-5 text-muted-foreground" />
-                  <Label className="text-base">Chế độ hiển thị</Label>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <Button 
-                    variant={theme === "light" ? "default" : "outline"} 
-                    className="justify-start"
-                    onClick={() => handleThemeChange("light")}
-                  >
-                    <Sun className="mr-2 h-4 w-4" />
-                    Sáng
-                  </Button>
-                  <Button 
-                    variant={theme === "dark" ? "default" : "outline"} 
-                    className="justify-start"
-                    onClick={() => handleThemeChange("dark")}
-                  >
-                    <Moon className="mr-2 h-4 w-4" />
-                    Tối
-                  </Button>
-                  <Button 
-                    variant={theme === "system" ? "default" : "outline"} 
-                    className="justify-start"
-                    onClick={() => handleThemeChange("system")}
-                  >
-                    <Monitor className="mr-2 h-4 w-4" />
-                    Hệ thống
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Languages className="h-5 w-5 text-muted-foreground" />
                   <Label className="text-base">Ngôn ngữ</Label>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <Button 
                     variant={language === "vi" ? "default" : "outline"} 
                     className="justify-start"

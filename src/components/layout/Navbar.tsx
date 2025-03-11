@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -17,7 +16,6 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -34,10 +32,8 @@ const Navbar = () => {
       }
     }
     
-    // Check theme setting from localStorage
-    const savedTheme = localStorage.getItem("theme") as 'light' | 'dark' | 'system' || 'system';
-    setTheme(savedTheme);
-    applyTheme(savedTheme);
+    // Remove any dark mode classes from the document
+    document.documentElement.classList.remove('dark');
   }, []);
   
   const toggleMenu = () => {
@@ -50,22 +46,6 @@ const Navbar = () => {
     setIsLoggedIn(false);
     setUser(null);
     navigate("/");
-  };
-  
-  const applyTheme = (theme: 'light' | 'dark' | 'system') => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else if (theme === 'light') {
-      document.documentElement.classList.remove('dark');
-    } else {
-      // Check system preference
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    }
-    localStorage.setItem("theme", theme);
   };
 
   const isAdmin = user?.role === "admin" || user?.role === "staff";
