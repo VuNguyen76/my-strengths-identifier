@@ -1,0 +1,1032 @@
+# SPA MANAGEMENT SYSTEM - API INTEGRATION GUIDE
+
+## Overview
+
+This document provides detailed instructions on where and how to integrate API endpoints throughout the frontend application. Each section specifies the file location, required API endpoints, and implementation details.
+
+## Authentication APIs
+
+### Login Page (src/pages/Login.tsx)
+
+```typescript
+// Replace the mock login simulation with actual API call
+const onSubmit = (values: LoginValues) => {
+  setIsLoading(true);
+  
+  // API call to authenticate user
+  fetch('${API_BASE_URL}/api/auth/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email: values.email,
+      password: values.password
+    }),
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Đăng nhập không thành công');
+      }
+      return response.json();
+    })
+    .then(data => {
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("token", data.token);
+      
+      toast.success("Đăng nhập thành công!");
+      navigate("/");
+    })
+    .catch(error => {
+      console.error("Login error:", error);
+      toast.error(error.message || "Đăng nhập không thành công");
+    })
+    .finally(() => {
+      setIsLoading(false);
+    });
+};
+```
+
+### Register Page (src/pages/Register.tsx)
+
+```typescript
+// API call to register new user
+fetch('${API_BASE_URL}/api/auth/register', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    name: values.name,
+    email: values.email,
+    phone: values.phone,
+    password: values.password
+  }),
+})
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Đăng ký không thành công');
+    }
+    return response.json();
+  })
+  .then(data => {
+    toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
+    navigate("/login");
+  })
+  .catch(error => {
+    console.error("Registration error:", error);
+    toast.error(error.message || "Đăng ký không thành công");
+  })
+  .finally(() => {
+    setIsLoading(false);
+  });
+```
+
+## User Dashboard APIs
+
+### User Dashboard (src/pages/user/Dashboard.tsx)
+
+Replace the static data with API calls to fetch user dashboard data:
+
+```typescript
+const [loading, setLoading] = useState(true);
+const [dashboardData, setDashboardData] = useState<any>(null);
+
+useEffect(() => {
+  // API call to get user dashboard data
+  const fetchDashboardData = async () => {
+    try {
+      const response = await fetch('${API_BASE_URL}/api/users/dashboard', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Không thể tải dữ liệu');
+      }
+      
+      const data = await response.json();
+      setDashboardData(data);
+    } catch (error) {
+      console.error("Dashboard fetch error:", error);
+      toast.error("Không thể tải dữ liệu dashboard");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  fetchDashboardData();
+}, []);
+```
+
+### User Bookings (src/pages/user/Bookings.tsx)
+
+Replace the static bookings data with API calls:
+
+```typescript
+const [bookings, setBookings] = useState<Booking[]>([]);
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  // API call to get user bookings
+  const fetchBookings = async () => {
+    try {
+      const response = await fetch('${API_BASE_URL}/api/bookings', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Không thể tải dữ liệu đặt lịch');
+      }
+      
+      const data = await response.json();
+      setBookings(data);
+    } catch (error) {
+      console.error("Bookings fetch error:", error);
+      toast.error("Không thể tải dữ liệu đặt lịch");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  fetchBookings();
+}, []);
+
+// For canceling a booking
+const confirmCancelBooking = async () => {
+  if (selectedBooking) {
+    setIsCancelDialogOpen(false);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/bookings/${selectedBooking.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ status: 'canceled' })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Không thể hủy lịch hẹn');
+      }
+      
+      toast.success("Đã hủy lịch hẹn thành công");
+      // Refresh booking list
+      setActiveTab('canceled');
+      setBookings(bookings.map(booking => 
+        booking.id === selectedBooking.id 
+          ? { ...booking, status: 'canceled' } 
+          : booking
+      ));
+    } catch (error) {
+      console.error("Booking cancel error:", error);
+      toast.error("Không thể hủy lịch hẹn");
+    }
+  }
+};
+```
+
+### User History (src/pages/user/History.tsx)
+
+Replace static history data with API calls:
+
+```typescript
+const [history, setHistory] = useState<any[]>([]);
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  // API call to get service history
+  const fetchHistory = async () => {
+    try {
+      const response = await fetch('${API_BASE_URL}/api/bookings/history', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Không thể tải lịch sử dịch vụ');
+      }
+      
+      const data = await response.json();
+      setHistory(data);
+    } catch (error) {
+      console.error("History fetch error:", error);
+      toast.error("Không thể tải lịch sử dịch vụ");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  fetchHistory();
+}, []);
+
+// For submitting rating
+const submitRating = async () => {
+  if (selectedService) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/bookings/${selectedService}/rating`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ 
+          rating: currentRating,
+          feedback: feedbackText
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Không thể gửi đánh giá');
+      }
+      
+      setRatingDialogOpen(false);
+      toast.success("Đánh giá của bạn đã được ghi nhận!");
+      
+      // Update local state
+      setHistory(prevHistory =>
+        prevHistory.map(item =>
+          item.id === selectedService
+            ? { ...item, rated: true, rating: currentRating, feedback: feedbackText }
+            : item
+        )
+      );
+    } catch (error) {
+      console.error("Rating error:", error);
+      toast.error("Không thể gửi đánh giá");
+    }
+  }
+};
+```
+
+## Booking System APIs
+
+### Booking Page (src/pages/Booking.tsx)
+
+```typescript
+// Handle booking completion
+const handleBookingComplete = async (formData: BookingFormValues) => {
+  try {
+    const response = await fetch('${API_BASE_URL}/api/bookings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        services: formData.services,
+        specialistId: formData.specialist,
+        date: formData.date,
+        time: formData.time,
+        customerName: formData.name,
+        customerPhone: formData.phone,
+        customerEmail: formData.email,
+        notes: formData.notes
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Không thể đặt lịch');
+    }
+    
+    const data = await response.json();
+    toast.success("Đặt lịch thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất có thể.");
+    navigate(`/booking/confirmation/${data.id}`);
+  } catch (error) {
+    console.error("Booking error:", error);
+    toast.error("Không thể đặt lịch. Vui lòng thử lại sau.");
+  }
+};
+```
+
+### Service Multi-Select (src/components/booking/ServiceMultiSelect.tsx)
+
+```typescript
+// Fetch services
+const [services, setServices] = useState<Service[]>([]);
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  const fetchServices = async () => {
+    try {
+      const response = await fetch('${API_BASE_URL}/api/services');
+      
+      if (!response.ok) {
+        throw new Error('Không thể tải danh sách dịch vụ');
+      }
+      
+      const data = await response.json();
+      setServices(data);
+    } catch (error) {
+      console.error("Services fetch error:", error);
+      toast.error("Không thể tải danh sách dịch vụ");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  fetchServices();
+}, []);
+```
+
+### Specialist Select (src/components/booking/SpecialistSelect.tsx)
+
+```typescript
+// Fetch specialists based on selected services
+const [specialists, setSpecialists] = useState<Specialist[]>([]);
+const [loading, setLoading] = useState(false);
+
+useEffect(() => {
+  const selectedServices = form.watch('services');
+  
+  if (!selectedServices || selectedServices.length === 0) {
+    setSpecialists([]);
+    return;
+  }
+  
+  setLoading(true);
+  
+  const fetchSpecialists = async () => {
+    try {
+      const servicesQuery = selectedServices.join(',');
+      const response = await fetch(`${API_BASE_URL}/api/specialists?services=${servicesQuery}`);
+      
+      if (!response.ok) {
+        throw new Error('Không thể tải danh sách chuyên viên');
+      }
+      
+      const data = await response.json();
+      setSpecialists(data);
+    } catch (error) {
+      console.error("Specialists fetch error:", error);
+      toast.error("Không thể tải danh sách chuyên viên");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  fetchSpecialists();
+}, [form.watch('services')]);
+```
+
+### DateTime Select (src/components/booking/DateTimeSelect.tsx)
+
+```typescript
+// Fetch available time slots based on specialist and date
+const [timeSlots, setTimeSlots] = useState<string[]>([]);
+const [loading, setLoading] = useState(false);
+
+useEffect(() => {
+  const specialist = form.watch('specialist');
+  const date = form.watch('date');
+  
+  if (!specialist || !date) {
+    setTimeSlots([]);
+    return;
+  }
+  
+  setLoading(true);
+  
+  const fetchTimeSlots = async () => {
+    try {
+      const dateString = date.toISOString().split('T')[0];
+      const response = await fetch(`${API_BASE_URL}/api/bookings/availability?specialistId=${specialist}&date=${dateString}`);
+      
+      if (!response.ok) {
+        throw new Error('Không thể tải danh sách khung giờ');
+      }
+      
+      const data = await response.json();
+      setTimeSlots(data);
+    } catch (error) {
+      console.error("Time slots fetch error:", error);
+      toast.error("Không thể tải danh sách khung giờ");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  fetchTimeSlots();
+}, [form.watch('specialist'), form.watch('date')]);
+```
+
+## Admin Section APIs
+
+### Admin Users (src/pages/admin/Users.tsx)
+
+```typescript
+// Fetch users
+const [users, setUsers] = useState<any[]>([]);
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('${API_BASE_URL}/api/users', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Không thể tải danh sách người dùng');
+      }
+      
+      const data = await response.json();
+      setUsers(data);
+    } catch (error) {
+      console.error("Users fetch error:", error);
+      toast.error("Không thể tải danh sách người dùng");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  fetchUsers();
+}, []);
+
+// Add new user
+const handleAddUser = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  const formData = new FormData(e.target as HTMLFormElement);
+  const userData = Object.fromEntries(formData.entries());
+  
+  try {
+    const response = await fetch('${API_BASE_URL}/api/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(userData)
+    });
+    
+    if (!response.ok) {
+      throw new Error('Không thể thêm người dùng');
+    }
+    
+    const newUser = await response.json();
+    setUsers([...users, newUser]);
+    toast.success("Người dùng mới đã được thêm thành công");
+    setIsAddUserDialogOpen(false);
+  } catch (error) {
+    console.error("Add user error:", error);
+    toast.error("Không thể thêm người dùng");
+  }
+};
+
+// Delete user
+const handleDeleteUser = async (userId: string) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Không thể xóa người dùng');
+    }
+    
+    setUsers(users.filter(user => user.id !== userId));
+    toast.success("Đã xóa người dùng thành công");
+  } catch (error) {
+    console.error("Delete user error:", error);
+    toast.error("Không thể xóa người dùng");
+  }
+};
+
+// Change user role
+const handleChangeRole = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  if (!selectedUser) return;
+  
+  const formData = new FormData(e.target as HTMLFormElement);
+  const newRole = formData.get('new-role');
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/users/${selectedUser.id}/role`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ role: newRole })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Không thể thay đổi vai trò');
+    }
+    
+    setUsers(users.map(user => 
+      user.id === selectedUser.id 
+        ? { ...user, role: newRole } 
+        : user
+    ));
+    toast.success(`Đã thay đổi vai trò của ${selectedUser.name} thành công`);
+    setIsRoleDialogOpen(false);
+  } catch (error) {
+    console.error("Change role error:", error);
+    toast.error("Không thể thay đổi vai trò");
+  }
+};
+```
+
+## Home Page APIs
+
+### Services Section (src/components/home/Services.tsx)
+
+```typescript
+const [services, setServices] = useState<Service[]>([]);
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  const fetchServices = async () => {
+    try {
+      const response = await fetch('${API_BASE_URL}/api/services?featured=true');
+      
+      if (!response.ok) {
+        throw new Error('Không thể tải danh sách dịch vụ');
+      }
+      
+      const data = await response.json();
+      setServices(data);
+    } catch (error) {
+      console.error("Services fetch error:", error);
+      // Don't show error toast on homepage to avoid bad UX
+      setServices([]); // Use empty array instead
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  fetchServices();
+}, []);
+```
+
+### Specialists Section (src/components/home/Specialists.tsx)
+
+```typescript
+const [specialists, setSpecialists] = useState<Specialist[]>([]);
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  const fetchSpecialists = async () => {
+    try {
+      const response = await fetch('${API_BASE_URL}/api/specialists?featured=true');
+      
+      if (!response.ok) {
+        throw new Error('Không thể tải danh sách chuyên viên');
+      }
+      
+      const data = await response.json();
+      setSpecialists(data);
+    } catch (error) {
+      console.error("Specialists fetch error:", error);
+      // Don't show error toast on homepage to avoid bad UX
+      setSpecialists([]); // Use empty array instead
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  fetchSpecialists();
+}, []);
+```
+
+### Blogs Section (src/components/home/FeaturedBlogs.tsx)
+
+```typescript
+const [blogs, setBlogs] = useState([]);
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  const fetchBlogs = async () => {
+    try {
+      const response = await fetch('${API_BASE_URL}/api/blogs?featured=true');
+      
+      if (!response.ok) {
+        throw new Error('Không thể tải danh sách bài viết');
+      }
+      
+      const data = await response.json();
+      setBlogs(data);
+    } catch (error) {
+      console.error("Blogs fetch error:", error);
+      // Don't show error toast on homepage to avoid bad UX
+      setBlogs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  fetchBlogs();
+}, []);
+```
+
+## API Request and Response Interceptors
+
+Create a new utility file for handling API requests with interceptors:
+
+### src/lib/api.ts
+
+```typescript
+// Define base URL for all API requests
+export const API_BASE_URL = 'http://localhost:8080';
+
+// Create a custom fetch function with interceptors
+export const apiFetch = async (url: string, options: RequestInit = {}) => {
+  // Get token from localStorage
+  const token = localStorage.getItem('token');
+  
+  // Set default headers
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...(options.headers || {})
+  };
+  
+  // Build request
+  const request = new Request(
+    url.startsWith('http') ? url : `${API_BASE_URL}${url}`,
+    {
+      ...options,
+      headers
+    }
+  );
+  
+  try {
+    // Send request
+    const response = await fetch(request);
+    
+    // Handle 401 Unauthorized (expired token)
+    if (response.status === 401) {
+      // Clear token and redirect to login
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('isLoggedIn');
+      window.location.href = '/login';
+      return Promise.reject(new Error('Phiên đăng nhập đã hết hạn'));
+    }
+    
+    // Handle 403 Forbidden (insufficient permissions)
+    if (response.status === 403) {
+      return Promise.reject(new Error('Bạn không có quyền thực hiện hành động này'));
+    }
+    
+    // Handle 500 and other server errors
+    if (response.status >= 500) {
+      return Promise.reject(new Error('Đã xảy ra lỗi từ máy chủ'));
+    }
+    
+    // Parse JSON if possible
+    const contentType = response.headers.get('content-type');
+    let data;
+    
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      data = await response.text();
+    }
+    
+    // Return both the response and the data
+    return { response, data };
+  } catch (error) {
+    console.error('API request failed:', error);
+    return Promise.reject(error);
+  }
+};
+
+// HTTP method shortcuts
+export const api = {
+  get: (url: string, options: RequestInit = {}) => 
+    apiFetch(url, { ...options, method: 'GET' }),
+    
+  post: (url: string, data: any, options: RequestInit = {}) => 
+    apiFetch(url, { 
+      ...options, 
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+    
+  put: (url: string, data: any, options: RequestInit = {}) => 
+    apiFetch(url, { 
+      ...options, 
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
+    
+  delete: (url: string, options: RequestInit = {}) => 
+    apiFetch(url, { ...options, method: 'DELETE' }),
+    
+  patch: (url: string, data: any, options: RequestInit = {}) => 
+    apiFetch(url, { 
+      ...options, 
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    })
+};
+```
+
+### Usage Example:
+
+```typescript
+import { api } from '@/lib/api';
+
+// Usage in components
+const fetchData = async () => {
+  try {
+    const { data } = await api.get('/api/services');
+    setServices(data);
+  } catch (error) {
+    toast.error(error.message || 'Không thể tải dữ liệu');
+  }
+};
+
+// Post data example
+const createBooking = async (bookingData) => {
+  try {
+    const { data } = await api.post('/api/bookings', bookingData);
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};
+```
+
+## API Authentication Handling
+
+Create an authentication context to manage tokens and user state:
+
+### src/contexts/AuthContext.tsx
+
+```typescript
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { api } from '@/lib/api';
+
+type User = {
+  id: string;
+  name?: string;
+  email: string;
+  role: string;
+};
+
+type AuthContextType = {
+  user: User | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+  register: (userData: any) => Promise<void>;
+};
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Load user and token from localStorage on initial render
+    const storedToken = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+
+    if (storedToken && storedUser) {
+      setToken(storedToken);
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error('Failed to parse stored user', error);
+        logout();
+      }
+    }
+    
+    setIsLoading(false);
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    setIsLoading(true);
+    
+    try {
+      const { data } = await api.post('/api/auth/login', { email, password });
+      
+      setToken(data.token);
+      setUser(data.user);
+      
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('isLoggedIn', 'true');
+    } catch (error) {
+      console.error('Login failed', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = () => {
+    setToken(null);
+    setUser(null);
+    
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('isLoggedIn');
+  };
+
+  const register = async (userData: any) => {
+    setIsLoading(true);
+    
+    try {
+      await api.post('/api/auth/register', userData);
+      // Note: Not logging in automatically after register
+    } catch (error) {
+      console.error('Registration failed', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        isAuthenticated: !!token,
+        isLoading,
+        login,
+        logout,
+        register,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  
+  return context;
+};
+```
+
+### Add AuthProvider to App.tsx
+
+```typescript
+// In App.tsx
+import { AuthProvider } from './contexts/AuthContext';
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        {/* ... existing code ... */}
+      </Router>
+    </AuthProvider>
+  );
+}
+```
+
+## API Implementation Checklist
+
+When integrating the APIs, follow this checklist:
+
+1. Create a `.env` file at the project root with:
+   ```
+   VITE_API_BASE_URL=http://localhost:8080
+   ```
+
+2. Update the `api.ts` file to use the environment variable:
+   ```typescript
+   export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+   ```
+
+3. Replace all static data in components with API calls
+4. Add loading states and error handling
+5. Replace direct `fetch` calls with the `api` utility
+6. Use the `useAuth` hook for authentication-related functionality
+7. Add protected routes for authenticated pages
+8. Test all API endpoints with various scenarios (success, error, etc.)
+
+## API Error Handling Guidelines
+
+Follow these guidelines for handling API errors:
+
+1. Use try/catch blocks around all API calls
+2. Display user-friendly error messages with toast notifications
+3. Log detailed errors to the console for debugging
+4. Implement fallback UI for when API calls fail
+5. Handle different error status codes appropriately (401, 403, 404, 500, etc.)
+6. Add retry logic for transient errors when appropriate
+
+## API Response Models
+
+Here are the expected response models for the main API endpoints:
+
+### User Model
+
+```typescript
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: 'user' | 'admin' | 'staff';
+  status: 'active' | 'inactive';
+  createdAt: string;
+}
+```
+
+### Service Model
+
+```typescript
+interface Service {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  duration: number; // in minutes
+  categoryId: string;
+  categoryName: string;
+  image: string;
+}
+```
+
+### Specialist Model
+
+```typescript
+interface Specialist {
+  id: string;
+  userId: string;
+  name: string;
+  role: string;
+  experience: string;
+  bio: string;
+  image: string;
+  services: Array<{
+    id: string;
+    name: string;
+  }>;
+  schedule: Array<{
+    dayOfWeek: number; // 1-7 for Monday-Sunday
+    startTime: string;
+    endTime: string;
+  }>;
+}
+```
+
+### Booking Model
+
+```typescript
+interface Booking {
+  id: string;
+  userId: string;
+  specialistId: string;
+  specialistName: string;
+  date: string;
+  time: string;
+  status: 'pending' | 'confirmed' | 'completed' | 'canceled';
+  services: Array<{
+    id: string;
+    name: string;
+    price: number;
+  }>;
+  totalPrice: number;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string;
+  notes: string;
+  paymentStatus: 'pending' | 'paid' | 'refunded';
+  createdAt: string;
+}
+```
+
+## API Implementation Timeline
+
+Suggested implementation order for the APIs:
+
+1. Set up API utility and authentication context
+2. Implement authentication APIs (login, register)
+3. Implement services and specialists APIs
+4. Implement booking system APIs
+5. Implement user dashboard APIs
+6. Implement admin APIs
+7. Implement reports and analytics APIs
+
+Remember to test each API endpoint thoroughly before moving on to the next one.
