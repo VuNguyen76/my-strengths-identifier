@@ -1,0 +1,259 @@
+
+# HƯỚNG DẪN STYLING CHO DỰ ÁN SPA MANAGEMENT
+
+## THƯ VIỆN STYLING CHÍNH
+
+Dự án sử dụng các thư viện styling chính sau:
+
+1. **Tailwind CSS**: Framework CSS utility-first để xây dựng giao diện nhanh chóng
+2. **shadcn/ui**: Thư viện component với styling đã được tích hợp sẵn Tailwind CSS
+3. **class-variance-authority**: Để tạo variants cho component
+4. **tailwind-merge**: Để kết hợp các class Tailwind CSS một cách thông minh
+5. **tailwindcss-animate**: Plugin Tailwind để thêm animation
+
+## MÀU SẮC CHÍNH
+
+Màu sắc chính của dự án được định nghĩa trong `src/index.css` sử dụng biến CSS:
+
+```css
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 330 80% 60%;              /* Màu hồng làm màu chủ đạo */
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 330 80% 60%;                 /* Màu ring focus cũng dùng hồng */
+  --radius: 0.5rem;
+  
+  /* Màu riêng cho sidebar */
+  --sidebar-background: 0 0% 98%;
+  --sidebar-foreground: 240 5.3% 26.1%;
+  --sidebar-primary: 240 5.9% 10%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 240 4.8% 95.9%;
+  --sidebar-accent-foreground: 240 5.9% 10%;
+  --sidebar-border: 220 13% 91%;
+  --sidebar-ring: 217.2 91.2% 59.8%;
+}
+```
+
+## CÁC COMPONENT UI CHÍNH
+
+### 1. Button
+
+Button sử dụng class-variance-authority để tạo các variant khác nhau:
+
+```tsx
+const buttonVariants = cva(
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+        sm: "h-9 rounded-md px-3",
+        lg: "h-11 rounded-md px-8",
+        icon: "h-10 w-10",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+)
+```
+
+Sử dụng:
+```tsx
+<Button variant="default" size="default">Button</Button>
+<Button variant="outline">Outline Button</Button>
+```
+
+### 2. Card
+
+Component Card được styling như sau:
+```tsx
+<Card className="overflow-hidden hover:shadow-lg transition-shadow">
+  <div className="aspect-video relative overflow-hidden">
+    <img 
+      src={blog.image} 
+      alt={blog.title}
+      className="object-cover w-full h-full transition-transform hover:scale-105 duration-300"
+    />
+  </div>
+  <CardHeader className="pb-2">...</CardHeader>
+  <CardContent>...</CardContent>
+</Card>
+```
+
+### 3. Input và Form Controls
+
+```tsx
+<Input
+  type="text"
+  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+/>
+```
+
+### 4. Sidebar
+
+Sidebar được styling với các class như:
+```tsx
+<div className="flex-1 py-6 space-y-1 overflow-y-auto">
+  <SidebarNavLink 
+    to={dashboardBasePath} 
+    icon={<LayoutDashboard size={20} />} 
+    isActive={isActiveLink(dashboardBasePath)}
+  >
+    Tổng quan
+  </SidebarNavLink>
+</div>
+```
+
+## RESPONSIVE DESIGN
+
+Dự án sử dụng các breakpoint responsive của Tailwind CSS:
+
+- `sm`: 640px (điện thoại ngang)
+- `md`: 768px (tablet)
+- `lg`: 1024px (desktop nhỏ)
+- `xl`: 1280px (desktop)
+- `2xl`: 1536px (desktop lớn)
+
+Ví dụ:
+```tsx
+<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+  {/* Trên mobile: 1 cột, tablet trở lên: 3 cột */}
+</div>
+```
+
+## CSS UTILITY CLASSES PHỔ BIẾN
+
+### Layout
+- `container`: Container có padding và max-width
+- `flex`, `grid`: Layout flexbox và grid
+- `items-center`, `justify-between`: Căn chỉnh flex items
+- `gap-4`: Spacing giữa các item
+- `p-6`, `px-4`, `py-2`: Padding
+- `m-4`, `mx-auto`: Margin
+- `space-y-4`: Spacing dọc giữa các phần tử con
+
+### Typography
+- `text-2xl`, `text-sm`: Font size
+- `font-bold`, `font-medium`: Font weight
+- `text-primary`, `text-muted-foreground`: Text color
+- `tracking-tight`: Letter spacing
+- `leading-none`: Line height
+- `text-center`: Text alignment
+
+### Borders & Shadows
+- `border`, `border-t`, `border-b`: Borders
+- `rounded-md`, `rounded-full`: Border radius
+- `shadow-sm`, `shadow-lg`: Box shadow
+
+### Transitions & Animations
+- `transition-colors`, `transition-transform`: Transitions
+- `hover:bg-accent`, `hover:scale-105`: Hover effects
+- `duration-300`: Transition duration
+
+### Common Components
+- `aspect-video`: Tỷ lệ khung hình 16:9
+- `divide-y`: Thêm border giữa các phần tử
+- `truncate`, `line-clamp-2`: Text overflow
+
+## CÁCH SỬ DỤNG TAILWIND ĐẶC BIỆT
+
+### CSS Nesting và Targeting
+
+```tsx
+// Targeting SVG trong button
+"[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+
+// Style khi state thay đổi
+"data-[state=checked]:bg-primary"
+```
+
+### Kết hợp Tailwind với shadcn/ui
+
+```tsx
+import { cn } from "@/lib/utils";
+
+// Kết hợp các class thông qua cn utility
+className={cn(
+  "base-class",
+  isActive && "active-class",
+  className
+)}
+```
+
+### Custom Modifier Classes
+
+```tsx
+// Styling khi phần tử con có aria-selected
+"[&:has([aria-selected].day-range-end)]:rounded-r-md"
+```
+
+## RESPONSIVE HELPERS
+
+```tsx
+// Mobile first
+<div className="block md:hidden">
+  {/* Chỉ hiển thị trên mobile */}
+</div>
+
+<div className="hidden md:block">
+  {/* Chỉ hiển thị từ tablet trở lên */}
+</div>
+
+// Responsive padding
+<div className="p-4 md:p-6 lg:p-8">
+  {/* Padding tăng dần theo kích thước màn hình */}
+</div>
+```
+
+## TIPS SỬ DỤNG TAILWIND HIỆU QUẢ
+
+1. **Tổ chức class có thứ tự**:
+   - Layout & Box Model: `flex`, `grid`, `p-6`...
+   - Typography: `text-lg`, `font-bold`...
+   - Visual: `bg-primary`, `rounded-lg`...
+   - Interactive: `hover:`, `focus:`...
+
+2. **Extract component** khi có quá nhiều class lặp lại.
+
+3. **Sử dụng `@apply`** trong một số trường hợp cần định nghĩa style phức tạp.
+
+4. **Sử dụng plugin** như `tailwindcss-animate` để mở rộng khả năng.
+
+## HƯỚNG DẪN SỬ DỤNG TAILWIND TRONG DỰ ÁN
+
+1. **Component mới**: Tạo component với styling Tailwind phù hợp.
+
+2. **Sửa component có sẵn**: Giữ cấu trúc class, chỉ thay đổi giá trị.
+
+3. **Responsive**: Luôn thiết kế mobile-first, sau đó thêm breakpoint.
+
+4. **Màu sắc**: Sử dụng các biến màu đã định nghĩa trong theme.
+
+5. **Tính nhất quán**: Giữ style nhất quán giữa các component.
