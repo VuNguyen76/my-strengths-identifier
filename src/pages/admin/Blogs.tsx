@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Card, 
@@ -50,209 +49,167 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-
-interface BlogPost {
-  id: string;
-  title: string;
-  excerpt: string;
-  content: string;
-  image: string;
-  author: string;
-  date: string;
-  readTime: number;
-  category: string;
-}
-
-// Sample blog data
-const initialBlogPosts: BlogPost[] = [
-  {
-    id: "1",
-    title: "Bí quyết chăm sóc da mùa hanh khô",
-    excerpt: "Làn da khô, bong tróc là nỗi lo thường trực trong mùa hanh khô. Hãy cùng khám phá những bí quyết giữ ẩm hiệu quả nhất.",
-    content: "Mùa đông với không khí hanh khô luôn là thử thách lớn đối với làn da. Nhiệt độ thấp kết hợp với độ ẩm không khí giảm mạnh khiến da dễ bị khô, bong tróc và mất nước...",
-    image: "https://images.unsplash.com/photo-1576426863848-c21f53c60b19?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
-    author: "Bác sĩ Nguyễn Thị A",
-    date: "2023-11-15",
-    readTime: 5,
-    category: "Chăm sóc da"
-  },
-  {
-    id: "2",
-    title: "Top 5 liệu trình chống lão hóa hiệu quả nhất",
-    excerpt: "Khám phá những liệu trình chống lão hóa được các chuyên gia da liễu đánh giá cao và khuyên dùng.",
-    content: "Lão hóa da là quá trình tự nhiên mà ai cũng phải trải qua. Tuy nhiên, với sự phát triển của khoa học công nghệ, chúng ta có thể làm chậm quá trình này...",
-    image: "https://images.unsplash.com/photo-1560750588-73207b1ef5b8?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
-    author: "Chuyên gia Trần Văn B",
-    date: "2023-10-20",
-    readTime: 7,
-    category: "Trẻ hóa da"
-  },
-  {
-    id: "3",
-    title: "Cách trị mụn hiệu quả tại nhà",
-    excerpt: "Những phương pháp đơn giản giúp bạn loại bỏ mụn một cách hiệu quả mà không cần đến spa.",
-    content: "Mụn là vấn đề phổ biến ảnh hưởng đến mọi lứa tuổi và loại da. Mặc dù có nhiều phương pháp điều trị tại các cơ sở thẩm mỹ, nhưng bạn cũng có thể áp dụng một số cách trị mụn hiệu quả tại nhà...",
-    image: "https://images.unsplash.com/photo-1573461169001-478ce74c359e?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
-    author: "Dược sĩ Phạm Thị C",
-    date: "2023-09-05",
-    readTime: 6,
-    category: "Trị mụn"
-  }
-];
-
-// Categories for blog posts
-const blogCategories = [
-  "Chăm sóc da",
-  "Trẻ hóa da",
-  "Trị mụn",
-  "Bảo vệ da",
-  "Dinh dưỡng"
-];
+import { useBlogs } from "@/hooks/useBlogs";
+import { useBlogCategories } from "@/hooks/useBlogCategories";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Blog form schema
 const blogFormSchema = z.object({
   title: z.string().min(5, "Tiêu đề phải có ít nhất 5 ký tự"),
-  excerpt: z.string().min(10, "Tóm tắt phải có ít nhất 10 ký tự"),
+  description: z.string().min(10, "Tóm tắt phải có ít nhất 10 ký tự"),
   content: z.string().min(50, "Nội dung phải có ít nhất 50 ký tự"),
-  image: z.string().url("URL hình ảnh không hợp lệ"),
+  image_url: z.string().url("URL hình ảnh không hợp lệ"),
   author: z.string().min(3, "Tên tác giả phải có ít nhất 3 ký tự"),
-  readTime: z.coerce.number().min(1, "Thời gian đọc không hợp lệ"),
-  category: z.string().min(1, "Vui lòng chọn danh mục")
+  category_id: z.string().min(1, "Vui lòng chọn danh mục")
 });
 
 type BlogFormValues = z.infer<typeof blogFormSchema>;
 
 const AdminBlogs = () => {
-  const [blogs, setBlogs] = useState<BlogPost[]>(initialBlogPosts);
-  const [filteredBlogs, setFilteredBlogs] = useState<BlogPost[]>(blogs);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [currentBlog, setCurrentBlog] = useState<BlogPost | null>(null);
+  const [currentBlogId, setCurrentBlogId] = useState<string | null>(null);
   
+  const queryClient = useQueryClient();
+  const { data: blogs = [], isLoading: blogsLoading } = useBlogs({ searchTerm: searchQuery });
+  const { data: categories = [], isLoading: categoriesLoading } = useBlogCategories();
+
   // Set up forms
   const addForm = useForm<BlogFormValues>({
     resolver: zodResolver(blogFormSchema),
     defaultValues: {
       title: "",
-      excerpt: "",
+      description: "",
       content: "",
-      image: "",
+      image_url: "",
       author: "",
-      readTime: 5,
-      category: "",
+      category_id: "",
     },
   });
   
   const editForm = useForm<BlogFormValues>({
     resolver: zodResolver(blogFormSchema),
-    defaultValues: {
-      title: "",
-      excerpt: "",
-      content: "",
-      image: "",
-      author: "",
-      readTime: 5,
-      category: "",
-    },
   });
 
-  // Handle search input change
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    
-    if (query.trim() === "") {
-      setFilteredBlogs(blogs);
-    } else {
-      const filtered = blogs.filter(blog => 
-        blog.title.toLowerCase().includes(query.toLowerCase()) ||
-        blog.author.toLowerCase().includes(query.toLowerCase()) ||
-        blog.category.toLowerCase().includes(query.toLowerCase())
-      );
-      setFilteredBlogs(filtered);
+  const currentBlog = blogs.find(blog => blog.id === currentBlogId);
+
+  // Handle add blog
+  const handleAddBlog = async (data: BlogFormValues) => {
+    try {
+      const { error } = await supabase
+        .from("blogs")
+        .insert([{
+          title: data.title,
+          description: data.description,
+          content: data.content,
+          image_url: data.image_url,
+          author: data.author,
+          category_id: data.category_id,
+          is_published: true,
+        }]);
+
+      if (error) throw error;
+
+      toast.success("Bài viết đã được thêm thành công!");
+      setIsAddDialogOpen(false);
+      addForm.reset();
+      queryClient.invalidateQueries({ queryKey: ["blogs"] });
+    } catch (error) {
+      console.error("Error adding blog:", error);
+      toast.error("Có lỗi xảy ra khi thêm bài viết");
     }
   };
 
-  // Handle add blog
-  const handleAddBlog = (data: BlogFormValues) => {
-    const newBlog: BlogPost = {
-      id: Date.now().toString(),
-      title: data.title,
-      excerpt: data.excerpt,
-      content: data.content,
-      image: data.image,
-      author: data.author,
-      date: new Date().toISOString().split('T')[0],
-      readTime: data.readTime,
-      category: data.category,
-    };
-    
-    const updatedBlogs = [...blogs, newBlog];
-    setBlogs(updatedBlogs);
-    setFilteredBlogs(updatedBlogs);
-    toast.success("Bài viết đã được thêm thành công!");
-    setIsAddDialogOpen(false);
-    addForm.reset();
-  };
-
   // Handle edit blog
-  const handleEditBlog = (data: BlogFormValues) => {
-    if (currentBlog) {
-      const updatedBlogs = blogs.map(blog => 
-        blog.id === currentBlog.id ? { 
-          ...blog, 
+  const handleEditBlog = async (data: BlogFormValues) => {
+    if (!currentBlogId) return;
+
+    try {
+      const { error } = await supabase
+        .from("blogs")
+        .update({
           title: data.title,
-          excerpt: data.excerpt,
+          description: data.description,
           content: data.content,
-          image: data.image,
+          image_url: data.image_url,
           author: data.author,
-          readTime: data.readTime,
-          category: data.category,
-        } : blog
-      );
-      
-      setBlogs(updatedBlogs);
-      setFilteredBlogs(updatedBlogs);
+          category_id: data.category_id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", currentBlogId);
+
+      if (error) throw error;
+
       toast.success("Bài viết đã được cập nhật thành công!");
       setIsEditDialogOpen(false);
-      setCurrentBlog(null);
+      setCurrentBlogId(null);
+      queryClient.invalidateQueries({ queryKey: ["blogs"] });
+    } catch (error) {
+      console.error("Error updating blog:", error);
+      toast.error("Có lỗi xảy ra khi cập nhật bài viết");
     }
   };
 
   // Handle delete blog
-  const handleDeleteBlog = () => {
-    if (currentBlog) {
-      const updatedBlogs = blogs.filter(blog => blog.id !== currentBlog.id);
-      setBlogs(updatedBlogs);
-      setFilteredBlogs(updatedBlogs);
+  const handleDeleteBlog = async () => {
+    if (!currentBlogId) return;
+
+    try {
+      const { error } = await supabase
+        .from("blogs")
+        .delete()
+        .eq("id", currentBlogId);
+
+      if (error) throw error;
+
       toast.success("Bài viết đã được xóa thành công!");
       setIsDeleteDialogOpen(false);
-      setCurrentBlog(null);
+      setCurrentBlogId(null);
+      queryClient.invalidateQueries({ queryKey: ["blogs"] });
+    } catch (error) {
+      console.error("Error deleting blog:", error);
+      toast.error("Có lỗi xảy ra khi xóa bài viết");
     }
   };
 
   // Open edit dialog and populate form
-  const openEditDialog = (blog: BlogPost) => {
-    setCurrentBlog(blog);
+  const openEditDialog = (blog: any) => {
+    setCurrentBlogId(blog.id);
     editForm.reset({
       title: blog.title,
-      excerpt: blog.excerpt,
-      content: blog.content,
-      image: blog.image,
+      description: blog.description || "",
+      content: blog.content || "",
+      image_url: blog.image_url || "",
       author: blog.author,
-      readTime: blog.readTime,
-      category: blog.category,
+      category_id: blog.category_id || "",
     });
     setIsEditDialogOpen(true);
   };
 
   // Open delete dialog
-  const openDeleteDialog = (blog: BlogPost) => {
-    setCurrentBlog(blog);
+  const openDeleteDialog = (blog: any) => {
+    setCurrentBlogId(blog.id);
     setIsDeleteDialogOpen(true);
   };
+
+  if (blogsLoading || categoriesLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight">Quản lý bài viết</h1>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Đang tải dữ liệu...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -274,10 +231,10 @@ const AdminBlogs = () => {
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Tìm kiếm theo tiêu đề, tác giả, danh mục..."
+                placeholder="Tìm kiếm theo tiêu đề, tác giả..."
                 className="pl-8"
                 value={searchQuery}
-                onChange={handleSearchChange}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
@@ -290,18 +247,17 @@ const AdminBlogs = () => {
                   <TableHead>Tác giả</TableHead>
                   <TableHead>Danh mục</TableHead>
                   <TableHead>Ngày đăng</TableHead>
-                  <TableHead>Thời gian đọc</TableHead>
                   <TableHead className="text-right">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredBlogs.length > 0 ? (
-                  filteredBlogs.map((blog) => (
+                {blogs.length > 0 ? (
+                  blogs.map((blog) => (
                     <TableRow key={blog.id}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <img
-                            src={blog.image}
+                            src={blog.image_url || "https://via.placeholder.com/150"}
                             alt={blog.title}
                             className="h-10 w-14 rounded object-cover"
                             onError={(e) => {
@@ -313,18 +269,14 @@ const AdminBlogs = () => {
                       </TableCell>
                       <TableCell>{blog.author}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{blog.category}</Badge>
+                        <Badge variant="outline">
+                          {blog.blog_categories?.name || "Chưa phân loại"}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center">
                           <Calendar className="mr-1 h-4 w-4 text-muted-foreground" />
-                          <span>{format(new Date(blog.date), "dd/MM/yyyy")}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <Clock className="mr-1 h-4 w-4 text-muted-foreground" />
-                          <span>{blog.readTime} phút</span>
+                          <span>{format(new Date(blog.created_at), "dd/MM/yyyy")}</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
@@ -355,7 +307,7 @@ const AdminBlogs = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-6">
+                    <TableCell colSpan={5} className="text-center py-6">
                       Không tìm thấy bài viết nào
                     </TableCell>
                   </TableRow>
@@ -391,7 +343,7 @@ const AdminBlogs = () => {
                 )}
               />
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={addForm.control}
                   name="author"
@@ -408,7 +360,7 @@ const AdminBlogs = () => {
                 
                 <FormField
                   control={addForm.control}
-                  name="category"
+                  name="category_id"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Danh mục <span className="text-destructive">*</span></FormLabel>
@@ -419,25 +371,11 @@ const AdminBlogs = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {blogCategories.map(category => (
-                            <SelectItem key={category} value={category}>{category}</SelectItem>
+                          {categories.map(category => (
+                            <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={addForm.control}
-                  name="readTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Thời gian đọc (phút) <span className="text-destructive">*</span></FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -446,7 +384,7 @@ const AdminBlogs = () => {
               
               <FormField
                 control={addForm.control}
-                name="image"
+                name="image_url"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Ảnh đại diện (URL) <span className="text-destructive">*</span></FormLabel>
@@ -460,7 +398,7 @@ const AdminBlogs = () => {
               
               <FormField
                 control={addForm.control}
-                name="excerpt"
+                name="description"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Tóm tắt <span className="text-destructive">*</span></FormLabel>
@@ -519,7 +457,7 @@ const AdminBlogs = () => {
                 )}
               />
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={editForm.control}
                   name="author"
@@ -536,7 +474,7 @@ const AdminBlogs = () => {
                 
                 <FormField
                   control={editForm.control}
-                  name="category"
+                  name="category_id"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Danh mục <span className="text-destructive">*</span></FormLabel>
@@ -547,25 +485,11 @@ const AdminBlogs = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {blogCategories.map(category => (
-                            <SelectItem key={category} value={category}>{category}</SelectItem>
+                          {categories.map(category => (
+                            <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={editForm.control}
-                  name="readTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Thời gian đọc (phút) <span className="text-destructive">*</span></FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -574,7 +498,7 @@ const AdminBlogs = () => {
               
               <FormField
                 control={editForm.control}
-                name="image"
+                name="image_url"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Ảnh đại diện (URL) <span className="text-destructive">*</span></FormLabel>
@@ -588,7 +512,7 @@ const AdminBlogs = () => {
               
               <FormField
                 control={editForm.control}
-                name="excerpt"
+                name="description"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Tóm tắt <span className="text-destructive">*</span></FormLabel>

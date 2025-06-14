@@ -2,11 +2,19 @@
 export interface BlogPost {
   id: string;
   title: string;
-  excerpt: string;
+  description: string;
   content: string;
-  image: string;
+  image_url: string;
   author: string;
-  date: string;
-  readTime: number;
+  created_at: string;
+  updated_at: string;
   category: string;
+  readTime?: number;
+}
+
+export interface BlogCategory {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
 }

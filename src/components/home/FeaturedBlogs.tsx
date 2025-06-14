@@ -3,35 +3,45 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Calendar } from "lucide-react";
-
-const blogs = [
-  {
-    id: "1",
-    title: "5 bước chăm sóc da cơ bản mỗi ngày",
-    description: "Khám phá quy trình 5 bước đơn giản giúp làn da của bạn luôn khỏe mạnh và rạng rỡ mỗi ngày.",
-    image: "https://images.unsplash.com/photo-1498843053639-170ff2122f35?ixlib=rb-1.2.1&auto=format&fit=crop&w=1050&q=80",
-    date: "15/06/2023",
-    author: "Thu Hà"
-  },
-  {
-    id: "2",
-    title: "Cách chọn serum phù hợp với từng loại da",
-    description: "Hướng dẫn chi tiết giúp bạn lựa chọn loại serum phù hợp nhất với làn da của mình.",
-    image: "https://images.unsplash.com/photo-1556228720-195a672e8a03?ixlib=rb-1.2.1&auto=format&fit=crop&w=1050&q=80",
-    date: "02/07/2023",
-    author: "Minh Tâm"
-  },
-  {
-    id: "3",
-    title: "Điều trị mụn hiệu quả tại nhà",
-    description: "Những phương pháp và sản phẩm hiệu quả giúp điều trị mụn tại nhà an toàn.",
-    image: "https://images.unsplash.com/photo-1643841364380-e990c1abf72b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1050&q=80",
-    date: "25/07/2023",
-    author: "Thanh Thảo"
-  }
-];
+import { useBlogs } from "@/hooks/useBlogs";
 
 const FeaturedBlogs = () => {
+  const { data: blogs = [], isLoading } = useBlogs({ limit: 3 });
+
+  const formatDate = (dateString: string): string => {
+    return new Date(dateString).toLocaleDateString('vi-VN');
+  };
+
+  if (isLoading) {
+    return (
+      <section className="py-20 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">Bài Viết Nổi Bật</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Chia sẻ kiến thức và bí quyết chăm sóc da từ các chuyên gia hàng đầu
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="overflow-hidden animate-pulse">
+                <div className="aspect-video bg-gray-200"></div>
+                <CardHeader>
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-6 bg-gray-200 rounded"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-4 bg-gray-200 rounded mb-4"></div>
+                  <div className="h-10 bg-gray-200 rounded"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-20 bg-gray-50">
       <div className="container mx-auto px-4">
@@ -43,11 +53,11 @@ const FeaturedBlogs = () => {
         </div>
         
         <div className="grid md:grid-cols-3 gap-8">
-          {blogs.map((blog) => (
-            <Card key={blog.title} className="overflow-hidden hover:shadow-lg transition-shadow">
+          {blogs.slice(0, 3).map((blog) => (
+            <Card key={blog.id} className="overflow-hidden hover:shadow-lg transition-shadow">
               <div className="aspect-video relative overflow-hidden">
                 <img 
-                  src={blog.image} 
+                  src={blog.image_url || "https://via.placeholder.com/400x200"} 
                   alt={blog.title}
                   className="object-cover w-full h-full transition-transform hover:scale-105 duration-300"
                 />
@@ -55,7 +65,7 @@ const FeaturedBlogs = () => {
               <CardHeader className="pb-2">
                 <div className="flex items-center text-sm text-gray-500 mb-2">
                   <Calendar className="mr-1 h-4 w-4" />
-                  <span>{blog.date}</span>
+                  <span>{formatDate(blog.created_at)}</span>
                   <span className="mx-2">•</span>
                   <span>{blog.author}</span>
                 </div>
@@ -63,7 +73,7 @@ const FeaturedBlogs = () => {
               </CardHeader>
               <CardContent>
                 <CardDescription className="mb-4 line-clamp-3">
-                  {blog.description}
+                  {blog.description || "Không có mô tả"}
                 </CardDescription>
                 <Button variant="outline" className="w-full" asChild>
                   <Link to={`/blog/${blog.id}`}>Đọc tiếp</Link>
