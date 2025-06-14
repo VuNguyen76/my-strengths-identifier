@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Calendar, Clock, Plus, Edit, Trash2 } from "lucide-react";
 
@@ -80,7 +79,7 @@ const Schedule = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentSchedule, setCurrentSchedule] = useState<SpecialistSchedule | null>(null);
 
-  const { specialists, loading: specialistsLoading } = useAdminSpecialists();
+  const { data: specialists = [], isLoading: specialistsLoading } = useAdminSpecialists();
   const { data: schedules = [], isLoading, error } = useAdminSchedules();
   const createOrUpdateSchedule = useCreateOrUpdateSchedule();
   const deleteSchedule = useDeleteSchedule();
@@ -285,7 +284,7 @@ const Schedule = () => {
                       <SelectContent>
                         {specialists.map((specialist) => (
                           <SelectItem key={specialist.id} value={specialist.id}>
-                            {specialist.name} - {specialist.role}
+                            {specialist.name} - {specialist.specialty}
                           </SelectItem>
                         ))}
                       </SelectContent>
