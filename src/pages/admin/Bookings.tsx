@@ -40,6 +40,9 @@ import { useAdminServices } from "@/hooks/useAdminServices";
 import { useAdminSpecialists } from "@/hooks/useAdminSpecialists";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import type { Database } from "@/integrations/supabase/types";
+
+type BookingStatus = Database["public"]["Enums"]["booking_status"];
 
 const AdminBookings = () => {
   const [activeTab, setActiveTab] = useState("all");
@@ -104,7 +107,7 @@ const AdminBookings = () => {
           specialist_id: selectedSpecialist?.id || null,
           booking_date: format(newBooking.date, 'yyyy-MM-dd'),
           booking_time: newBooking.time,
-          status: 'pending',
+          status: 'pending' as BookingStatus,
           total_price: selectedService?.price || 0,
           notes: newBooking.notes
         }])
@@ -152,7 +155,7 @@ const AdminBookings = () => {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "confirmed":
+      case "upcoming":
         return <Badge className="bg-green-500">Đã xác nhận</Badge>;
       case "pending":
         return <Badge className="bg-yellow-500">Chờ xác nhận</Badge>;
@@ -165,7 +168,7 @@ const AdminBookings = () => {
     }
   };
 
-  const updateBookingStatus = async (bookingId: string, newStatus: string) => {
+  const updateBookingStatus = async (bookingId: string, newStatus: BookingStatus) => {
     try {
       const { error } = await supabase
         .from('bookings')
@@ -193,7 +196,7 @@ const AdminBookings = () => {
     const matchesTab =
       activeTab === "all" ||
       (activeTab === "pending" && booking.status === "pending") ||
-      (activeTab === "confirmed" && booking.status === "confirmed") ||
+      (activeTab === "upcoming" && booking.status === "upcoming") ||
       (activeTab === "completed" && booking.status === "completed") ||
       (activeTab === "cancelled" && booking.status === "canceled");
 
@@ -415,7 +418,7 @@ const AdminBookings = () => {
         <TabsList className="mb-4">
           <TabsTrigger value="all">Tất cả</TabsTrigger>
           <TabsTrigger value="pending">Chờ xác nhận</TabsTrigger>
-          <TabsTrigger value="confirmed">Đã xác nhận</TabsTrigger>
+          <TabsTrigger value="upcoming">Đã xác nhận</TabsTrigger>
           <TabsTrigger value="completed">Hoàn thành</TabsTrigger>
           <TabsTrigger value="cancelled">Đã hủy</TabsTrigger>
         </TabsList>
@@ -460,7 +463,7 @@ const AdminBookings = () => {
                                 <Button 
                                   size="sm" 
                                   variant="outline"
-                                  onClick={() => updateBookingStatus(booking.id, "confirmed")}
+                                  onClick={() => updateBookingStatus(booking.id, "upcoming")}
                                 >
                                   Xác nhận
                                 </Button>
@@ -474,7 +477,7 @@ const AdminBookings = () => {
                                 </Button>
                               </>
                             )}
-                            {booking.status === "confirmed" && (
+                            {booking.status === "upcoming" && (
                               <Button 
                                 size="sm" 
                                 variant="outline"
