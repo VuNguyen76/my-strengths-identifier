@@ -38,15 +38,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { format, isSameDay, addDays } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { vi } from "date-fns/locale";
-import { toast } from "sonner";
 import { PlusCircle, Trash2, Clock, User, Calendar as CalendarIcon } from "lucide-react";
-import { SPECIALISTS, TIME_SLOTS } from "@/components/booking/constants";
-import { Specialist } from "@/types/service";
+import { TIME_SLOTS } from "@/components/booking/constants";
+import { useSpecialists } from "@/hooks/useSpecialists";
+import {
+  useAdminSchedules,
+  useCreateOrUpdateSchedule,
+  useDeleteSchedule,
+  type SpecialistSchedule
+} from "@/hooks/useAdminSchedules";
 
 // Schedule entry schema
 const scheduleFormSchema = z.object({
@@ -63,41 +68,17 @@ const scheduleFormSchema = z.object({
 
 type FormValues = z.infer<typeof scheduleFormSchema>;
 
-// Sample data for existing schedules
-const initialSchedules = [
-  {
-    id: "1",
-    specialistId: "1",
-    date: new Date(new Date().setHours(0, 0, 0, 0)), // Today
-    slots: ["09:00", "10:00", "14:00"]
-  },
-  {
-    id: "2",
-    specialistId: "2",
-    date: new Date(new Date().setHours(0, 0, 0, 0)), // Today
-    slots: ["11:00", "15:00", "16:00"]
-  },
-  {
-    id: "3",
-    specialistId: "1",
-    date: addDays(new Date().setHours(0, 0, 0, 0), 1), // Tomorrow
-    slots: ["09:00", "10:00", "11:00"]
-  },
-  {
-    id: "4",
-    specialistId: "3",
-    date: addDays(new Date().setHours(0, 0, 0, 0), 2), // Day after tomorrow
-    slots: ["14:00", "15:00"]
-  }
-];
-
 const Schedule = () => {
-  const [schedules, setSchedules] = useState(initialSchedules);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedSchedule, setSelectedSchedule] = useState<typeof initialSchedules[0] | null>(null);
-  const [activeTab, setActiveTab] = useState("calendar"); // "calendar" or "list"
+  const [selectedSchedule, setSelectedSchedule] = useState<SpecialistSchedule | null>(null);
+  const [activeTab, setActiveTab] = useState("calendar");
+
+  const { data: schedules = [], isLoading, error } = useAdminSchedules();
+  const { data: specialists = [] } = useSpecialists();
+  const createOrUpdateSchedule = useCreateOrUpdateSchedule();
+  const deleteSchedule = useDeleteSchedule();
 
   // Create form
   const form = useForm<FormValues>({
@@ -116,58 +97,35 @@ const Schedule = () => {
     );
   };
 
-  // Get specialist by ID
-  const getSpecialistById = (id: string): Specialist | undefined => {
-    return SPECIALISTS.find((specialist) => specialist.id === id);
-  };
-
   const handleTabChange = (value: string) => {
     setActiveTab(value);
   };
 
   const handleAddSchedule = (values: FormValues) => {
-    // Check if schedule already exists for this specialist and date
-    const existingScheduleIndex = schedules.findIndex(
-      schedule => 
-        schedule.specialistId === values.specialistId && 
-        isSameDay(new Date(schedule.date), values.date)
-    );
-    
-    if (existingScheduleIndex >= 0) {
-      // Update existing schedule
-      const updatedSchedules = [...schedules];
-      updatedSchedules[existingScheduleIndex] = {
-        ...updatedSchedules[existingScheduleIndex],
-        slots: values.slots
-      };
-      setSchedules(updatedSchedules);
-      toast.success("Lịch làm việc đã được cập nhật thành công!");
-    } else {
-      // Create new schedule
-      const newSchedule = {
-        id: Date.now().toString(),
-        specialistId: values.specialistId,
-        date: values.date,
-        slots: values.slots
-      };
-      setSchedules([...schedules, newSchedule]);
-      toast.success("Lịch làm việc mới đã được tạo thành công!");
-    }
-    
-    setIsAddDialogOpen(false);
-    form.reset();
+    createOrUpdateSchedule.mutate({
+      specialist_id: values.specialistId,
+      date: format(values.date, 'yyyy-MM-dd'),
+      time_slots: values.slots
+    }, {
+      onSuccess: () => {
+        setIsAddDialogOpen(false);
+        form.reset();
+      }
+    });
   };
 
   const handleDeleteSchedule = () => {
     if (selectedSchedule) {
-      setSchedules(schedules.filter(schedule => schedule.id !== selectedSchedule.id));
-      toast.success("Lịch làm việc đã được xóa thành công!");
-      setIsDeleteDialogOpen(false);
-      setSelectedSchedule(null);
+      deleteSchedule.mutate(selectedSchedule.id, {
+        onSuccess: () => {
+          setIsDeleteDialogOpen(false);
+          setSelectedSchedule(null);
+        }
+      });
     }
   };
 
-  const openDeleteDialog = (schedule: typeof initialSchedules[0]) => {
+  const openDeleteDialog = (schedule: SpecialistSchedule) => {
     setSelectedSchedule(schedule);
     setIsDeleteDialogOpen(true);
   };
@@ -177,6 +135,35 @@ const Schedule = () => {
       setSelectedDate(date);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Quản lý lịch làm việc</h1>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Đang tải dữ liệu...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Quản lý lịch làm việc</h1>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <p className="text-red-500">Có lỗi xảy ra khi tải dữ liệu</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -236,43 +223,40 @@ const Schedule = () => {
                 </CardHeader>
                 <CardContent>
                   {getSchedulesForDate(selectedDate).length > 0 ? (
-                    getSchedulesForDate(selectedDate).map((schedule) => {
-                      const specialist = getSpecialistById(schedule.specialistId);
-                      return (
-                        <div
-                          key={schedule.id}
-                          className="border rounded-md p-4 mb-4 relative"
-                        >
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <h3 className="font-medium">{specialist?.name}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                {specialist?.role}
-                              </p>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive"
-                              onClick={() => openDeleteDialog(schedule)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                    getSchedulesForDate(selectedDate).map((schedule) => (
+                      <div
+                        key={schedule.id}
+                        className="border rounded-md p-4 mb-4 relative"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h3 className="font-medium">{schedule.specialist?.name}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {schedule.specialist?.role}
+                            </p>
                           </div>
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {schedule.slots.map((slot) => (
-                              <div
-                                key={slot}
-                                className="bg-primary/10 text-primary rounded px-2 py-1 text-sm flex items-center"
-                              >
-                                <Clock className="h-3 w-3 mr-1" />
-                                {slot}
-                              </div>
-                            ))}
-                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => openDeleteDialog(schedule)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                      );
-                    })
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {schedule.time_slots.map((slot) => (
+                            <div
+                              key={slot}
+                              className="bg-primary/10 text-primary rounded px-2 py-1 text-sm flex items-center"
+                            >
+                              <Clock className="h-3 w-3 mr-1" />
+                              {slot}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
                       Không có lịch làm việc nào cho ngày này
@@ -286,7 +270,7 @@ const Schedule = () => {
         
         <TabsContent value="list">
           <div className="grid grid-cols-1 gap-6">
-            {SPECIALISTS.map((specialist) => (
+            {specialists.map((specialist) => (
               <Card key={specialist.id}>
                 <CardHeader>
                   <div className="flex justify-between items-center">
@@ -311,10 +295,10 @@ const Schedule = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {schedules.filter(schedule => schedule.specialistId === specialist.id).length > 0 ? (
+                  {schedules.filter(schedule => schedule.specialist_id === specialist.id).length > 0 ? (
                     <div className="space-y-4">
                       {schedules
-                        .filter(schedule => schedule.specialistId === specialist.id)
+                        .filter(schedule => schedule.specialist_id === specialist.id)
                         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                         .map((schedule) => (
                           <div
@@ -335,7 +319,7 @@ const Schedule = () => {
                               </Button>
                             </div>
                             <div className="flex flex-wrap gap-2 mt-2">
-                              {schedule.slots.map((slot) => (
+                              {schedule.time_slots.map((slot) => (
                                 <div
                                   key={slot}
                                   className="bg-primary/10 text-primary rounded px-2 py-1 text-sm flex items-center"
@@ -387,7 +371,7 @@ const Schedule = () => {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {SPECIALISTS.map((specialist) => (
+                        {specialists.map((specialist) => (
                           <SelectItem key={specialist.id} value={specialist.id}>
                             {specialist.name} - {specialist.role}
                           </SelectItem>
@@ -468,7 +452,9 @@ const Schedule = () => {
               />
               
               <DialogFooter>
-                <Button type="submit">Lưu lịch làm việc</Button>
+                <Button type="submit" disabled={createOrUpdateSchedule.isPending}>
+                  {createOrUpdateSchedule.isPending ? "Đang lưu..." : "Lưu lịch làm việc"}
+                </Button>
               </DialogFooter>
             </form>
           </Form>
@@ -489,8 +475,9 @@ const Schedule = () => {
             <AlertDialogAction 
               onClick={handleDeleteSchedule} 
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteSchedule.isPending}
             >
-              Xóa
+              {deleteSchedule.isPending ? "Đang xóa..." : "Xóa"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

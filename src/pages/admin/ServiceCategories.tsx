@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,6 +44,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+import {
+  useAdminServiceCategories,
+  useCreateServiceCategory,
+  useUpdateServiceCategory,
+  useDeleteServiceCategory,
+  type ServiceCategory
+} from "@/hooks/useAdminServiceCategories";
+
 // Service category schema
 const categoryFormSchema = z.object({
   name: z.string().min(2, {
@@ -54,56 +61,21 @@ const categoryFormSchema = z.object({
   icon: z.string().optional(),
 });
 
-// Example categories
-const initialCategories = [
-  {
-    id: "1",
-    name: "Chăm sóc da",
-    description: "Các dịch vụ chăm sóc da cơ bản và chuyên sâu",
-    icon: "Sparkles",
-    servicesCount: 5
-  },
-  {
-    id: "2",
-    name: "Điều trị",
-    description: "Các dịch vụ điều trị da chuyên sâu",
-    icon: "Syringe",
-    servicesCount: 3
-  },
-  {
-    id: "3",
-    name: "Trẻ hóa",
-    description: "Các dịch vụ trẻ hóa da và chống lão hóa",
-    icon: "Clock",
-    servicesCount: 2
-  },
-  {
-    id: "4",
-    name: "Massage",
-    description: "Các dịch vụ massage mặt và cơ thể",
-    icon: "Massage",
-    servicesCount: 4
-  },
-  {
-    id: "5",
-    name: "Làm đẹp",
-    description: "Các dịch vụ làm đẹp khác",
-    icon: "Gem",
-    servicesCount: 1
-  }
-];
-
-type Category = typeof initialCategories[0];
+type FormValues = z.infer<typeof categoryFormSchema>;
 
 const ServiceCategories = () => {
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
+  const [currentCategory, setCurrentCategory] = useState<ServiceCategory | null>(null);
+
+  const { data: categories = [], isLoading, error } = useAdminServiceCategories();
+  const createCategory = useCreateServiceCategory();
+  const updateCategory = useUpdateServiceCategory();
+  const deleteCategory = useDeleteServiceCategory();
 
   // Add category form
-  const addForm = useForm<z.infer<typeof categoryFormSchema>>({
+  const addForm = useForm<FormValues>({
     resolver: zodResolver(categoryFormSchema),
     defaultValues: {
       name: "",
@@ -113,7 +85,7 @@ const ServiceCategories = () => {
   });
 
   // Edit category form
-  const editForm = useForm<z.infer<typeof categoryFormSchema>>({
+  const editForm = useForm<FormValues>({
     resolver: zodResolver(categoryFormSchema),
     defaultValues: {
       name: "",
@@ -122,68 +94,94 @@ const ServiceCategories = () => {
     },
   });
 
-  const handleAddCategory = (values: z.infer<typeof categoryFormSchema>) => {
-    const newCategory: Category = {
-      id: Date.now().toString(),
+  const handleAddCategory = (values: FormValues) => {
+    createCategory.mutate({
       name: values.name,
-      description: values.description || "",
-      icon: values.icon || "Folder",
-      servicesCount: 0
-    };
-
-    setCategories([...categories, newCategory]);
-    toast.success("Danh mục dịch vụ mới đã được thêm thành công!");
-    setIsAddDialogOpen(false);
-    addForm.reset();
+      description: values.description || null,
+      icon: values.icon || null,
+    }, {
+      onSuccess: () => {
+        setIsAddDialogOpen(false);
+        addForm.reset();
+      }
+    });
   };
 
-  const handleEditCategory = (values: z.infer<typeof categoryFormSchema>) => {
+  const handleEditCategory = (values: FormValues) => {
     if (currentCategory) {
-      const updatedCategories = categories.map(category =>
-        category.id === currentCategory.id ? {
-          ...category,
-          name: values.name,
-          description: values.description || "",
-          icon: values.icon || category.icon,
-        } : category
-      );
-
-      setCategories(updatedCategories);
-      toast.success("Danh mục dịch vụ đã được cập nhật thành công!");
-      setIsEditDialogOpen(false);
-      setCurrentCategory(null);
+      updateCategory.mutate({
+        id: currentCategory.id,
+        name: values.name,
+        description: values.description || null,
+        icon: values.icon || null,
+      }, {
+        onSuccess: () => {
+          setIsEditDialogOpen(false);
+          setCurrentCategory(null);
+        }
+      });
     }
   };
 
   const handleDeleteCategory = () => {
     if (currentCategory) {
-      if (currentCategory.servicesCount > 0) {
-        toast.error(`Không thể xóa danh mục này vì có ${currentCategory.servicesCount} dịch vụ đang sử dụng!`);
+      if (currentCategory.services_count && currentCategory.services_count > 0) {
         setIsDeleteDialogOpen(false);
         return;
       }
       
-      setCategories(categories.filter(category => category.id !== currentCategory.id));
-      toast.success("Danh mục dịch vụ đã được xóa thành công!");
-      setIsDeleteDialogOpen(false);
-      setCurrentCategory(null);
+      deleteCategory.mutate(currentCategory.id, {
+        onSuccess: () => {
+          setIsDeleteDialogOpen(false);
+          setCurrentCategory(null);
+        }
+      });
     }
   };
 
-  const openEditDialog = (category: Category) => {
+  const openEditDialog = (category: ServiceCategory) => {
     setCurrentCategory(category);
     editForm.reset({
       name: category.name,
-      description: category.description,
-      icon: category.icon,
+      description: category.description || "",
+      icon: category.icon || "",
     });
     setIsEditDialogOpen(true);
   };
 
-  const openDeleteDialog = (category: Category) => {
+  const openDeleteDialog = (category: ServiceCategory) => {
     setCurrentCategory(category);
     setIsDeleteDialogOpen(true);
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Quản lý danh mục dịch vụ</h1>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Đang tải dữ liệu...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Quản lý danh mục dịch vụ</h1>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <p className="text-red-500">Có lỗi xảy ra khi tải dữ liệu</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -218,8 +216,8 @@ const ServiceCategories = () => {
                       {category.description}
                     </div>
                   </TableCell>
-                  <TableCell>{category.icon}</TableCell>
-                  <TableCell>{category.servicesCount}</TableCell>
+                  <TableCell>{category.icon || "-"}</TableCell>
+                  <TableCell>{category.services_count || 0}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-2">
                       <Button
@@ -301,7 +299,9 @@ const ServiceCategories = () => {
                 )}
               />
               <DialogFooter>
-                <Button type="submit">Thêm danh mục</Button>
+                <Button type="submit" disabled={createCategory.isPending}>
+                  {createCategory.isPending ? "Đang thêm..." : "Thêm danh mục"}
+                </Button>
               </DialogFooter>
             </form>
           </Form>
@@ -364,7 +364,9 @@ const ServiceCategories = () => {
                 )}
               />
               <DialogFooter>
-                <Button type="submit">Lưu thay đổi</Button>
+                <Button type="submit" disabled={updateCategory.isPending}>
+                  {updateCategory.isPending ? "Đang lưu..." : "Lưu thay đổi"}
+                </Button>
               </DialogFooter>
             </form>
           </Form>
@@ -377,8 +379,8 @@ const ServiceCategories = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Xác nhận xóa danh mục</AlertDialogTitle>
             <AlertDialogDescription>
-              {currentCategory?.servicesCount && currentCategory.servicesCount > 0 ? 
-                `Không thể xóa danh mục "${currentCategory.name}" vì có ${currentCategory.servicesCount} dịch vụ đang sử dụng!` : 
+              {currentCategory?.services_count && currentCategory.services_count > 0 ? 
+                `Không thể xóa danh mục "${currentCategory.name}" vì có ${currentCategory.services_count} dịch vụ đang sử dụng!` : 
                 `Bạn có chắc chắn muốn xóa danh mục "${currentCategory?.name}"? Hành động này không thể hoàn tác.`
               }
             </AlertDialogDescription>
@@ -388,9 +390,9 @@ const ServiceCategories = () => {
             <AlertDialogAction 
               onClick={handleDeleteCategory} 
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={currentCategory?.servicesCount && currentCategory.servicesCount > 0}
+              disabled={(currentCategory?.services_count && currentCategory.services_count > 0) || deleteCategory.isPending}
             >
-              Xóa
+              {deleteCategory.isPending ? "Đang xóa..." : "Xóa"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

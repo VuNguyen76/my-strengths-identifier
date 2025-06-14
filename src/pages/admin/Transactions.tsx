@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { 
   Card, 
@@ -45,109 +46,7 @@ import * as XLSX from 'xlsx';
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
-
-const transactionsData = [
-  {
-    id: "TX12345",
-    date: "2023-06-15T09:30:00",
-    customer: "Nguyễn Văn A",
-    service: "Chăm sóc da cơ bản",
-    specialist: "Trần Thị B",
-    amount: 450000,
-    status: "completed",
-    paymentMethod: "Thẻ tín dụng",
-  },
-  {
-    id: "TX12346",
-    date: "2023-06-15T14:00:00",
-    customer: "Lê Văn C",
-    service: "Trị mụn chuyên sâu",
-    specialist: "Phạm Văn D",
-    amount: 650000,
-    status: "completed",
-    paymentMethod: "Tiền mặt",
-  },
-  {
-    id: "TX12347",
-    date: "2023-06-16T10:15:00",
-    customer: "Hoàng Thị E",
-    service: "Trẻ hóa da",
-    specialist: "Nguyễn Thị F",
-    amount: 850000,
-    status: "completed",
-    paymentMethod: "Chuyển khoản",
-  },
-  {
-    id: "TX12348",
-    date: "2023-06-16T16:30:00",
-    customer: "Đỗ Văn G",
-    service: "Massage mặt",
-    specialist: "Lý Thị H",
-    amount: 350000,
-    status: "pending",
-    paymentMethod: "Thẻ tín dụng",
-  },
-  {
-    id: "TX12349",
-    date: "2023-06-17T11:00:00",
-    customer: "Trịnh Văn I",
-    service: "Tẩy trang chuyên sâu",
-    specialist: "Bùi Thị K",
-    amount: 250000,
-    status: "completed",
-    paymentMethod: "Tiền mặt",
-  },
-  {
-    id: "TX12350",
-    date: "2023-06-17T13:45:00",
-    customer: "Lương Thị L",
-    service: "Trị nám",
-    specialist: "Vũ Văn M",
-    amount: 750000,
-    status: "failed",
-    paymentMethod: "Thẻ tín dụng",
-  },
-  {
-    id: "TX12351",
-    date: "2023-06-18T09:00:00",
-    customer: "Mai Văn N",
-    service: "Chăm sóc da cơ bản",
-    specialist: "Đinh Thị O",
-    amount: 450000,
-    status: "completed",
-    paymentMethod: "Chuyển khoản",
-  },
-  {
-    id: "TX12352",
-    date: "2023-06-18T15:30:00",
-    customer: "Cao Thị P",
-    service: "Trị mụn chuyên sâu",
-    specialist: "Đặng Văn Q",
-    amount: 650000,
-    status: "refunded",
-    paymentMethod: "Thẻ tín dụng",
-  },
-  {
-    id: "TX12353",
-    date: "2023-06-19T10:30:00",
-    customer: "Lâm Văn R",
-    service: "Trẻ hóa da",
-    specialist: "Hà Thị S",
-    amount: 850000,
-    status: "completed",
-    paymentMethod: "Tiền mặt",
-  },
-  {
-    id: "TX12354",
-    date: "2023-06-19T14:15:00",
-    customer: "Trương Văn T",
-    service: "Massage mặt",
-    specialist: "Ngô Thị U",
-    amount: 350000,
-    status: "pending",
-    paymentMethod: "Chuyển khoản",
-  },
-];
+import { useAdminTransactions } from "@/hooks/useAdminTransactions";
 
 const Transactions = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -157,19 +56,20 @@ const Transactions = () => {
     from: undefined,
     to: undefined,
   });
-  const [filteredTransactions, setFilteredTransactions] = useState(transactionsData);
+  const [filteredTransactions, setFilteredTransactions] = useState<any[]>([]);
   const itemsPerPage = 10;
+
+  const { data: transactions = [], isLoading, error } = useAdminTransactions(searchTerm);
 
   // Apply filters whenever any filter changes
   useEffect(() => {
-    // Apply filters
-    const filtered = transactionsData.filter((transaction) => {
+    const filtered = transactions.filter((transaction) => {
       // Apply text search
       const matchesSearch =
         searchTerm === "" ||
         transaction.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.service.toLowerCase().includes(searchTerm.toLowerCase());
+        transaction.transaction_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.booking?.customer_name?.toLowerCase().includes(searchTerm.toLowerCase());
 
       // Apply status filter
       const matchesStatus =
@@ -178,7 +78,7 @@ const Transactions = () => {
       // Apply date filter
       let matchesDate = true;
       if (dateRange?.from && dateRange?.to) {
-        const transactionDate = parseISO(transaction.date);
+        const transactionDate = parseISO(transaction.created_at);
         matchesDate = isWithinInterval(transactionDate, {
           start: dateRange.from,
           end: dateRange.to,
@@ -189,7 +89,7 @@ const Transactions = () => {
     });
 
     setFilteredTransactions(filtered);
-  }, [searchTerm, statusFilter, dateRange]);
+  }, [transactions, searchTerm, statusFilter, dateRange]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -220,16 +120,16 @@ const Transactions = () => {
       // Format the data for Excel
       const excelData = filteredTransactions.map(transaction => ({
         'ID Giao dịch': transaction.id,
-        'Ngày': format(new Date(transaction.date), "dd/MM/yyyy HH:mm"),
-        'Khách hàng': transaction.customer,
-        'Dịch vụ': transaction.service,
-        'Chuyên viên': transaction.specialist,
+        'Ngày': format(new Date(transaction.created_at), "dd/MM/yyyy HH:mm"),
+        'Khách hàng': transaction.booking?.customer_name || '',
+        'Dịch vụ': transaction.booking?.booking_services?.[0]?.service?.name || '',
+        'Chuyên viên': transaction.booking?.specialist?.name || '',
         'Số tiền': transaction.amount,
         'Trạng thái': transaction.status === 'completed' ? 'Hoàn thành' : 
                     transaction.status === 'pending' ? 'Đang xử lý' : 
                     transaction.status === 'failed' ? 'Thất bại' : 
                     transaction.status === 'refunded' ? 'Hoàn tiền' : 'Không xác định',
-        'Phương thức': transaction.paymentMethod
+        'Phương thức': transaction.payment_method || ''
       }));
 
       // Create a worksheet
@@ -260,6 +160,35 @@ const Transactions = () => {
     setDateRange({ from: undefined, to: undefined });
     toast.success("Đã xóa bộ lọc ngày");
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight">Quản lý giao dịch</h1>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Đang tải dữ liệu...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight">Quản lý giao dịch</h1>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <p className="text-red-500">Có lỗi xảy ra khi tải dữ liệu</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -324,7 +253,7 @@ const Transactions = () => {
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Tìm kiếm theo ID, khách hàng, dịch vụ..."
+                placeholder="Tìm kiếm theo ID, khách hàng..."
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -371,14 +300,14 @@ const Transactions = () => {
                   currentItems.map((transaction) => (
                     <TableRow key={transaction.id}>
                       <TableCell className="font-medium">
-                        {transaction.id}
+                        {transaction.transaction_id || transaction.id}
                       </TableCell>
                       <TableCell>
-                        {format(new Date(transaction.date), "dd/MM/yyyy HH:mm")}
+                        {format(new Date(transaction.created_at), "dd/MM/yyyy HH:mm")}
                       </TableCell>
-                      <TableCell>{transaction.customer}</TableCell>
-                      <TableCell>{transaction.service}</TableCell>
-                      <TableCell>{transaction.specialist}</TableCell>
+                      <TableCell>{transaction.booking?.customer_name || 'N/A'}</TableCell>
+                      <TableCell>{transaction.booking?.booking_services?.[0]?.service?.name || 'N/A'}</TableCell>
+                      <TableCell>{transaction.booking?.specialist?.name || 'N/A'}</TableCell>
                       <TableCell>
                         {new Intl.NumberFormat("vi-VN", {
                           style: "currency",
@@ -386,7 +315,7 @@ const Transactions = () => {
                         }).format(transaction.amount)}
                       </TableCell>
                       <TableCell>{getStatusBadge(transaction.status)}</TableCell>
-                      <TableCell>{transaction.paymentMethod}</TableCell>
+                      <TableCell>{transaction.payment_method || 'N/A'}</TableCell>
                     </TableRow>
                   ))
                 ) : (

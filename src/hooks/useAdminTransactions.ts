@@ -2,6 +2,30 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export interface Transaction {
+  id: string;
+  booking_id: string;
+  amount: number;
+  status: string;
+  payment_method: string | null;
+  transaction_id: string | null;
+  created_at: string;
+  booking?: {
+    id: string;
+    customer_name: string;
+    customer_email: string | null;
+    customer_phone: string;
+    specialist?: {
+      name: string;
+    };
+    booking_services?: Array<{
+      service?: {
+        name: string;
+      };
+    }>;
+  };
+}
+
 export const useAdminTransactions = (searchQuery?: string) => {
   return useQuery({
     queryKey: ["admin-transactions", searchQuery],
@@ -10,15 +34,21 @@ export const useAdminTransactions = (searchQuery?: string) => {
         .from('payments')
         .select(`
           *,
-          bookings (
+          bookings(
+            id,
             customer_name,
-            customer_phone
+            customer_email,
+            customer_phone,
+            specialists(name),
+            booking_services(
+              services(name)
+            )
           )
         `)
         .order('created_at', { ascending: false });
 
       if (searchQuery) {
-        query = query.or(`transaction_id.ilike.%${searchQuery}%,payment_method.ilike.%${searchQuery}%`);
+        query = query.or(`transaction_id.ilike.%${searchQuery}%`);
       }
 
       const { data, error } = await query;
@@ -27,14 +57,13 @@ export const useAdminTransactions = (searchQuery?: string) => {
 
       return data?.map(payment => ({
         id: payment.id,
-        transactionId: payment.transaction_id || `TXN${payment.id.slice(0, 8)}`,
-        customer: payment.bookings?.customer_name || 'Khách hàng',
-        phone: payment.bookings?.customer_phone || 'N/A',
+        booking_id: payment.booking_id || '',
         amount: payment.amount,
-        method: payment.payment_method || 'Tiền mặt',
-        status: payment.status,
-        date: payment.created_at,
-        bookingId: payment.booking_id
+        status: payment.status || 'pending',
+        payment_method: payment.payment_method,
+        transaction_id: payment.transaction_id,
+        created_at: payment.created_at,
+        booking: payment.bookings
       })) || [];
     }
   });

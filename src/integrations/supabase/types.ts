@@ -319,6 +319,41 @@ export type Database = {
           },
         ]
       }
+      specialist_schedules: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          specialist_id: string
+          time_slots: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          specialist_id: string
+          time_slots?: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          specialist_id?: string
+          time_slots?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "specialist_schedules_specialist_id_fkey"
+            columns: ["specialist_id"]
+            isOneToOne: false
+            referencedRelation: "specialists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       specialists: {
         Row: {
           bio: string | null
