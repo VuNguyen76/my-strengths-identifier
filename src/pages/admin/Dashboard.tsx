@@ -11,29 +11,41 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 const AdminDashboard = () => {
-  // This would normally come from an API
-  const dashboardData = {
-    totalUsers: 195,
-    totalServices: 25,
-    totalSpecialists: 12,
-    totalBookings: 237,
-    pendingBookings: 42,
-    totalRevenue: 15780000,
-    recentBookings: [
-      { id: 1, name: "Nguyễn Văn A", service: "Chăm sóc da cơ bản", date: "2023-06-15T09:00:00", status: "Đã hoàn thành" },
-      { id: 2, name: "Trần Thị B", service: "Trị mụn chuyên sâu", date: "2023-06-15T11:00:00", status: "Đang chờ" },
-      { id: 3, name: "Lê Văn C", service: "Trẻ hóa da", date: "2023-06-16T10:00:00", status: "Đã hoàn thành" },
-      { id: 4, name: "Phạm Thị D", service: "Massage mặt", date: "2023-06-16T14:00:00", status: "Đã hủy" },
-      { id: 5, name: "Hoàng Văn E", service: "Tẩy trang chuyên sâu", date: "2023-06-17T09:30:00", status: "Đang chờ" },
-    ],
-    popularServices: [
-      { id: 1, name: "Chăm sóc da cơ bản", bookings: 42, revenue: 4200000 },
-      { id: 2, name: "Trị mụn chuyên sâu", bookings: 28, revenue: 5600000 },
-      { id: 3, name: "Trẻ hóa da", bookings: 30, revenue: 6000000 },
-    ]
-  };
+  const { data: dashboardData, isLoading, error } = useDashboardStats();
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight">Quản lý hệ thống</h1>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Đang tải dữ liệu...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight">Quản lý hệ thống</h1>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <p className="text-red-500">Có lỗi xảy ra khi tải dữ liệu</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!dashboardData) return null;
 
   return (
     <div className="space-y-6">
@@ -52,7 +64,7 @@ const AdminDashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{dashboardData.totalUsers}</div>
             <p className="text-xs text-muted-foreground">
-              +18% so với tháng trước
+              Tổng số người dùng
             </p>
           </CardContent>
         </Card>
@@ -67,7 +79,7 @@ const AdminDashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{dashboardData.totalServices}</div>
             <p className="text-xs text-muted-foreground">
-              +5% so với tháng trước
+              Dịch vụ đang hoạt động
             </p>
           </CardContent>
         </Card>
@@ -82,7 +94,7 @@ const AdminDashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{dashboardData.totalSpecialists}</div>
             <p className="text-xs text-muted-foreground">
-              +2 người mới
+              Chuyên viên đang hoạt động
             </p>
           </CardContent>
         </Card>
@@ -97,7 +109,7 @@ const AdminDashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{dashboardData.totalBookings}</div>
             <p className="text-xs text-muted-foreground">
-              +12% so với tháng trước
+              {dashboardData.pendingBookings} đang chờ xử lý
             </p>
           </CardContent>
         </Card>
@@ -114,7 +126,7 @@ const AdminDashboard = () => {
               {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(dashboardData.totalRevenue)}
             </div>
             <p className="text-xs text-muted-foreground">
-              +8% so với tháng trước
+              Từ đơn đã hoàn thành
             </p>
           </CardContent>
         </Card>
@@ -144,30 +156,38 @@ const AdminDashboard = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {dashboardData.recentBookings.map((booking) => (
-                  <TableRow key={booking.id}>
-                    <TableCell className="font-medium">{booking.name}</TableCell>
-                    <TableCell>{booking.service}</TableCell>
-                    <TableCell>
-                      {new Date(booking.date).toLocaleDateString('vi-VN')} {' '}
-                      {new Date(booking.date).toLocaleTimeString('vi-VN', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        booking.status === 'Đã hoàn thành' 
-                          ? 'bg-green-100 text-green-800'
-                          : booking.status === 'Đang chờ'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {booking.status}
-                      </span>
+                {dashboardData.recentBookings.length > 0 ? (
+                  dashboardData.recentBookings.map((booking) => (
+                    <TableRow key={booking.id}>
+                      <TableCell className="font-medium">{booking.name}</TableCell>
+                      <TableCell>{booking.service}</TableCell>
+                      <TableCell>
+                        {new Date(booking.date).toLocaleDateString('vi-VN')} {' '}
+                        {new Date(booking.date).toLocaleTimeString('vi-VN', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          booking.status === 'Đã hoàn thành' 
+                            ? 'bg-green-100 text-green-800'
+                            : booking.status === 'Đang chờ'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {booking.status}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-6">
+                      Chưa có lịch đặt nào
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -186,42 +206,53 @@ const AdminDashboard = () => {
             </Button>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tên dịch vụ</TableHead>
-                  <TableHead className="text-right">Số lượt đặt</TableHead>
-                  <TableHead className="text-right">Doanh thu</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dashboardData.popularServices.map((service) => (
-                  <TableRow key={service.id}>
-                    <TableCell className="font-medium">{service.name}</TableCell>
-                    <TableCell className="text-right">{service.bookings}</TableCell>
-                    <TableCell className="text-right">
-                      {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(service.revenue)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <div className="mt-4 space-y-2">
-              {dashboardData.popularServices.map((service) => (
-                <div key={service.id} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">{service.name}</p>
-                    <p className="text-sm font-medium">{Math.round((service.bookings / dashboardData.totalBookings) * 100)}%</p>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="bg-primary h-full rounded-full" 
-                      style={{ width: `${Math.round((service.bookings / dashboardData.totalBookings) * 100)}%` }}
-                    ></div>
-                  </div>
+            {dashboardData.popularServices.length > 0 ? (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tên dịch vụ</TableHead>
+                      <TableHead className="text-right">Số lượt đặt</TableHead>
+                      <TableHead className="text-right">Doanh thu ước tính</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dashboardData.popularServices.map((service, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">{service.name}</TableCell>
+                        <TableCell className="text-right">{service.bookings}</TableCell>
+                        <TableCell className="text-right">
+                          {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(service.revenue)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <div className="mt-4 space-y-2">
+                  {dashboardData.popularServices.map((service, index) => {
+                    const percentage = dashboardData.totalBookings > 0 
+                      ? Math.round((service.bookings / dashboardData.totalBookings) * 100)
+                      : 0;
+                    return (
+                      <div key={index} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium">{service.name}</p>
+                          <p className="text-sm font-medium">{percentage}%</p>
+                        </div>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="bg-primary h-full rounded-full" 
+                            style={{ width: `${percentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
+              </>
+            ) : (
+              <p className="text-center py-6 text-muted-foreground">Chưa có dữ liệu dịch vụ</p>
+            )}
           </CardContent>
         </Card>
       </div>
