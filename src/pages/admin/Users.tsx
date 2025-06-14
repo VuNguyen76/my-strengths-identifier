@@ -1,53 +1,30 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { 
-  Search, 
-  MoreHorizontal, 
-  UserPlus, 
-  Edit, 
-  Trash, 
-  Shield 
-} from "lucide-react";
 import { toast } from "sonner";
 import { useUsers } from "@/hooks/useUsers";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import UserTable from "@/components/admin/users/UserTable";
+import AddUserDialog from "@/components/admin/users/AddUserDialog";
+import RoleChangeDialog from "@/components/admin/users/RoleChangeDialog";
+import UserSearch from "@/components/admin/users/UserSearch";
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: 'user' | 'staff' | 'admin';
+  status: string;
+  createdAt: string;
+}
 
 const AdminUsers = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   const queryClient = useQueryClient();
   const { data: users = [], isLoading, error } = useUsers(searchQuery);
@@ -56,77 +33,7 @@ const AdminUsers = () => {
     setSearchQuery(e.target.value);
   };
 
-  const handleAddUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-    
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const name = formData.get('name') as string;
-    const phone = formData.get('phone') as string;
-    const role = formData.get('role') as 'user' | 'staff' | 'admin';
-
-    if (!email || !password || !name) {
-      toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
-      return;
-    }
-
-    setIsCreatingUser(true);
-    
-    try {
-      // Create user through Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-            phone,
-            role
-          }
-        }
-      });
-
-      if (authError) {
-        if (authError.message.includes('User already registered')) {
-          toast.error("Email này đã được đăng ký");
-        } else {
-          toast.error("Có lỗi xảy ra: " + authError.message);
-        }
-        return;
-      }
-
-      if (authData.user) {
-        // Update the user profile with additional info
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .upsert({
-            id: authData.user.id,
-            name,
-            phone,
-            role: role as 'user' | 'staff' | 'admin'
-          });
-
-        if (profileError) {
-          console.error("Profile error:", profileError);
-          toast.error("Tạo user thành công nhưng có lỗi khi cập nhật thông tin profile");
-        } else {
-          toast.success("Người dùng mới đã được thêm thành công");
-        }
-      }
-
-      setIsAddUserDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-      (e.target as HTMLFormElement).reset();
-    } catch (error: any) {
-      console.error("Add user error:", error);
-      toast.error("Có lỗi xảy ra: " + error.message);
-    } finally {
-      setIsCreatingUser(false);
-    }
-  };
-
-  const handleEditUser = (user: any) => {
+  const handleEditUser = (user: User) => {
     setSelectedUser(user);
     toast.info("Chức năng chỉnh sửa người dùng sẽ được cập nhật sau");
   };
@@ -151,47 +58,9 @@ const AdminUsers = () => {
     }
   };
 
-  const handleChangeRole = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUser) return;
-
-    const formData = new FormData(e.target as HTMLFormElement);
-    const newRole = formData.get('new-role') as 'user' | 'staff' | 'admin';
-
-    try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ role: newRole })
-        .eq('id', selectedUser.id);
-
-      if (error) throw error;
-
-      toast.success(`Đã thay đổi vai trò của ${selectedUser.name} thành công`);
-      setIsRoleDialogOpen(false);
-      setSelectedUser(null);
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-    } catch (error: any) {
-      toast.error("Có lỗi xảy ra: " + error.message);
-    }
-  };
-
-  const openRoleDialog = (user: any) => {
+  const openRoleDialog = (user: User) => {
     setSelectedUser(user);
     setIsRoleDialogOpen(true);
-  };
-
-  const getRoleBadge = (role: string) => {
-    return role === 'admin' 
-      ? <Badge className="bg-purple-600">Admin</Badge>
-      : role === 'staff'
-      ? <Badge className="bg-orange-500">Staff</Badge>
-      : <Badge className="bg-blue-500">Người dùng</Badge>;
-  };
-
-  const getStatusBadge = (status: string) => {
-    return status === 'active'
-      ? <Badge className="bg-green-500">Hoạt động</Badge>
-      : <Badge className="bg-gray-500">Không hoạt động</Badge>;
   };
 
   if (isLoading) {
@@ -227,60 +96,10 @@ const AdminUsers = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Quản lý người dùng</h1>
-        <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Thêm người dùng
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Thêm người dùng mới</DialogTitle>
-              <DialogDescription>
-                Nhập thông tin để tạo tài khoản người dùng mới
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleAddUser} className="space-y-4">
-              <div className="grid gap-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Tên đầy đủ *</Label>
-                  <Input id="name" name="name" placeholder="Nguyễn Văn A" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input id="email" name="email" type="email" placeholder="example@email.com" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Số điện thoại</Label>
-                  <Input id="phone" name="phone" placeholder="0901234567" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Mật khẩu *</Label>
-                  <Input id="password" name="password" type="password" placeholder="Tối thiểu 6 ký tự" required minLength={6} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">Vai trò</Label>
-                  <select 
-                    id="role" 
-                    name="role"
-                    className="w-full p-2 border rounded-md"
-                    defaultValue="user"
-                  >
-                    <option value="user">Người dùng</option>
-                    <option value="staff">Staff</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="submit" disabled={isCreatingUser}>
-                  {isCreatingUser ? "Đang tạo..." : "Tạo người dùng"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <AddUserDialog 
+          isOpen={isAddUserDialogOpen} 
+          onOpenChange={setIsAddUserDialogOpen} 
+        />
       </div>
 
       <Card>
@@ -288,117 +107,24 @@ const AdminUsers = () => {
           <CardTitle>Danh sách người dùng</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Tìm kiếm theo tên hoặc số điện thoại..."
-                className="pl-8"
-                value={searchQuery}
-                onChange={handleSearch}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tên</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Số điện thoại</TableHead>
-                  <TableHead>Vai trò</TableHead>
-                  <TableHead>Trạng thái</TableHead>
-                  <TableHead>Ngày tạo</TableHead>
-                  <TableHead className="text-right">Thao tác</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.length > 0 ? (
-                  users.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.phone}</TableCell>
-                      <TableCell>{getRoleBadge(user.role)}</TableCell>
-                      <TableCell>{getStatusBadge(user.status)}</TableCell>
-                      <TableCell>
-                        {new Date(user.createdAt).toLocaleDateString("vi-VN")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Chỉnh sửa
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openRoleDialog(user)}>
-                              <Shield className="mr-2 h-4 w-4" />
-                              Phân quyền
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              onClick={() => handleDeleteUser(user.id)}
-                            >
-                              <Trash className="mr-2 h-4 w-4" />
-                              Xóa
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center">
-                      Không tìm thấy người dùng nào
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          <UserSearch 
+            searchQuery={searchQuery}
+            onSearchChange={handleSearch}
+          />
+          <UserTable 
+            users={users}
+            onEditUser={handleEditUser}
+            onDeleteUser={handleDeleteUser}
+            onChangeRole={openRoleDialog}
+          />
         </CardContent>
       </Card>
 
-      <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Phân quyền người dùng</DialogTitle>
-            <DialogDescription>
-              Thay đổi vai trò của {selectedUser?.name}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleChangeRole} className="space-y-4">
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="new-role">Vai trò mới</Label>
-                <select 
-                  id="new-role" 
-                  name="new-role"
-                  className="w-full p-2 border rounded-md"
-                  defaultValue={selectedUser?.role}
-                >
-                  <option value="user">Người dùng</option>
-                  <option value="staff">Staff</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit">Lưu thay đổi</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <RoleChangeDialog 
+        isOpen={isRoleDialogOpen}
+        onOpenChange={setIsRoleDialogOpen}
+        user={selectedUser}
+      />
     </div>
   );
 };
