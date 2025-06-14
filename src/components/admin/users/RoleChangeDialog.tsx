@@ -40,10 +40,14 @@ const RoleChangeDialog = ({ isOpen, onOpenChange, user }: RoleChangeDialogProps)
     const newRole = formData.get('new-role') as 'user' | 'staff' | 'admin';
 
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ role: newRole })
-        .eq('id', user.id);
+      // Update user metadata through admin API
+      const { error } = await supabase.auth.admin.updateUserById(user.id, {
+        user_metadata: { 
+          role: newRole,
+          name: user.name,
+          phone: user.phone
+        }
+      });
 
       if (error) throw error;
 

@@ -6,28 +6,31 @@ export const useUsers = (searchQuery?: string) => {
   return useQuery({
     queryKey: ["users", searchQuery],
     queryFn: async () => {
-      let query = supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (searchQuery) {
-        query = query.or(`name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%`);
-      }
-
-      const { data, error } = await query;
+      // Get users from auth.users through admin API
+      const { data, error } = await supabase.auth.admin.listUsers();
 
       if (error) throw error;
 
-      return data?.map(user => ({
+      // Filter users based on search query if provided
+      let filteredUsers = data?.users || [];
+      
+      if (searchQuery) {
+        filteredUsers = filteredUsers.filter(user => 
+          user.user_metadata?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.phone?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+      }
+
+      return filteredUsers.map(user => ({
         id: user.id,
-        name: user.name || 'Chưa có tên',
-        email: 'email@example.com', // Email không lưu trong user_profiles
-        phone: user.phone || 'Chưa có SĐT',
-        role: user.role as 'user' | 'staff' | 'admin',
+        name: user.user_metadata?.name || user.email || 'Chưa có tên',
+        email: user.email || 'Chưa có email',
+        phone: user.user_metadata?.phone || user.phone || 'Chưa có SĐT',
+        role: (user.user_metadata?.role as 'user' | 'staff' | 'admin') || 'user',
         status: 'active' as const,
         createdAt: user.created_at
-      })) || [];
+      }));
     }
   });
 };

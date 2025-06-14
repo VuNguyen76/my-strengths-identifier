@@ -7,13 +7,11 @@ export const useAdminRoles = () => {
   return useQuery({
     queryKey: ["admin-roles"],
     queryFn: async () => {
-      // Get user counts for each role from user_profiles
-      const { data: userProfiles } = await supabase
-        .from('user_profiles')
-        .select('role');
+      // Get users from auth to count roles
+      const { data: users } = await supabase.auth.admin.listUsers();
 
-      const roleCounts = userProfiles?.reduce((acc: Record<string, number>, profile) => {
-        const role = profile.role || 'user';
+      const roleCounts = users?.users?.reduce((acc: Record<string, number>, user) => {
+        const role = user.user_metadata?.role || 'user';
         acc[role] = (acc[role] || 0) + 1;
         return acc;
       }, {}) || {};
@@ -66,8 +64,6 @@ export const useCreateRole = () => {
   
   return useMutation({
     mutationFn: async (roleData: { name: string; description: string; permissions: string[] }) => {
-      // For now, we'll just show a toast since there's no roles table in the database
-      // This would need a proper roles table to be implemented
       throw new Error("Chức năng tạo vai trò mới sẽ được triển khai khi có bảng roles trong database");
     },
     onSuccess: () => {
@@ -85,7 +81,6 @@ export const useUpdateRole = () => {
   
   return useMutation({
     mutationFn: async ({ id, ...roleData }: { id: string; name: string; description: string; permissions: string[] }) => {
-      // For now, we'll just show a toast since there's no roles table in the database
       throw new Error("Chức năng cập nhật vai trò sẽ được triển khai khi có bảng roles trong database");
     },
     onSuccess: () => {
@@ -103,7 +98,6 @@ export const useDeleteRole = () => {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      // For now, we'll just show a toast since there's no roles table in the database
       throw new Error("Chức năng xóa vai trò sẽ được triển khai khi có bảng roles trong database");
     },
     onSuccess: () => {

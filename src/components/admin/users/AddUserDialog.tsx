@@ -34,7 +34,6 @@ const AddUserDialog = ({ isOpen, onOpenChange }: AddUserDialogProps) => {
     const password = formData.get('password') as string;
     const name = formData.get('name') as string;
     const phone = formData.get('phone') as string;
-    const role = formData.get('role') as 'user' | 'staff' | 'admin';
 
     if (!email || !password || !name) {
       toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
@@ -44,7 +43,7 @@ const AddUserDialog = ({ isOpen, onOpenChange }: AddUserDialogProps) => {
     setIsCreatingUser(true);
     
     try {
-      // Create user through Supabase Auth
+      // Create user through Supabase Auth with metadata
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -52,7 +51,7 @@ const AddUserDialog = ({ isOpen, onOpenChange }: AddUserDialogProps) => {
           data: {
             name,
             phone,
-            role
+            role: 'user'
           }
         }
       });
@@ -67,27 +66,11 @@ const AddUserDialog = ({ isOpen, onOpenChange }: AddUserDialogProps) => {
       }
 
       if (authData.user) {
-        // Update the user profile with additional info
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .upsert({
-            id: authData.user.id,
-            name,
-            phone,
-            role: role as 'user' | 'staff' | 'admin'
-          });
-
-        if (profileError) {
-          console.error("Profile error:", profileError);
-          toast.error("Tạo user thành công nhưng có lỗi khi cập nhật thông tin profile");
-        } else {
-          toast.success("Người dùng mới đã được thêm thành công");
-        }
+        toast.success("Người dùng mới đã được thêm thành công");
+        onOpenChange(false);
+        queryClient.invalidateQueries({ queryKey: ["users"] });
+        (e.target as HTMLFormElement).reset();
       }
-
-      onOpenChange(false);
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-      (e.target as HTMLFormElement).reset();
     } catch (error: any) {
       console.error("Add user error:", error);
       toast.error("Có lỗi xảy ra: " + error.message);
@@ -128,19 +111,6 @@ const AddUserDialog = ({ isOpen, onOpenChange }: AddUserDialogProps) => {
             <div className="space-y-2">
               <Label htmlFor="password">Mật khẩu *</Label>
               <Input id="password" name="password" type="password" placeholder="Tối thiểu 6 ký tự" required minLength={6} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">Vai trò</Label>
-              <select 
-                id="role" 
-                name="role"
-                className="w-full p-2 border rounded-md"
-                defaultValue="user"
-              >
-                <option value="user">Người dùng</option>
-                <option value="staff">Staff</option>
-                <option value="admin">Admin</option>
-              </select>
             </div>
           </div>
           <DialogFooter>
