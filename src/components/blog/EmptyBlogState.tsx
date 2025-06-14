@@ -1,9 +1,19 @@
 
-const EmptyBlogState = () => {
+import { Button } from "@/components/ui/button";
+
+interface EmptyBlogStateProps {
+  onClearFilters?: () => void;
+}
+
+const EmptyBlogState = ({ onClearFilters }: EmptyBlogStateProps) => {
   return (
-    <div className="text-center py-12">
-      <h3 className="text-xl font-medium mb-2">Không tìm thấy bài viết</h3>
-      <p className="text-muted-foreground">Vui lòng thử tìm kiếm với từ khóa khác</p>
+    <div className="col-span-full text-center py-12">
+      <p className="text-lg text-gray-500 mb-4">Không tìm thấy bài viết nào.</p>
+      {onClearFilters && (
+        <Button variant="outline" onClick={onClearFilters}>
+          Xóa bộ lọc
+        </Button>
+      )}
     </div>
   );
 };

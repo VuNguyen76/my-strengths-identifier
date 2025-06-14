@@ -8,7 +8,7 @@ interface BlogGridProps {
 
 const BlogGrid = ({ blogs }: BlogGridProps) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
       {blogs.map(post => (
         <BlogCard key={post.id} post={post} />
       ))}
