@@ -11,11 +11,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Calendar, Clock, Star } from "lucide-react";
+import { Search, Calendar, Clock, Star, Loader2 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Link } from "react-router-dom";
-import { Specialist } from "@/types/service";
 import {
   Dialog,
   DialogContent,
@@ -24,105 +23,42 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { useSpecialists } from "@/hooks/useSpecialists";
+import { Tables } from "@/integrations/supabase/types";
 
-// Mock data for specialists
-const specialistsList: Specialist[] = [
-  {
-    id: "1",
-    name: "Nguyễn Thị Mai",
-    role: "Chuyên gia điều trị mụn",
-    experience: "10 năm kinh nghiệm",
-    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-1.2.1&auto=format&fit=crop&w=634&q=80",
-    bio: "Chuyên gia hàng đầu về điều trị mụn với hơn 10 năm kinh nghiệm. Thạc sĩ da liễu tại Đại học Y Hà Nội, từng tu nghiệp tại Hàn Quốc và Singapore.",
-    availability: ["Thứ 2", "Thứ 3", "Thứ 5", "Thứ 6"]
-  },
-  {
-    id: "2",
-    name: "Trần Văn Minh",
-    role: "Bác sĩ da liễu",
-    experience: "15 năm kinh nghiệm",
-    image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1050&q=80",
-    bio: "Bác sĩ chuyên khoa da liễu với 15 năm kinh nghiệm. Tốt nghiệp Đại học Y Hà Nội, chuyên gia trong lĩnh vực chăm sóc và điều trị da chuyên sâu.",
-    availability: ["Thứ 3", "Thứ 4", "Thứ 7", "Chủ nhật"]
-  },
-  {
-    id: "3",
-    name: "Lê Thị Hương",
-    role: "Chuyên gia trị liệu",
-    experience: "8 năm kinh nghiệm",
-    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1050&q=80",
-    bio: "Chuyên gia trị liệu với 8 năm kinh nghiệm. Chuyên về các phương pháp massage và trị liệu tự nhiên, kết hợp Đông và Tây y.",
-    availability: ["Thứ 2", "Thứ 4", "Thứ 6", "Thứ 7"]
-  },
-  {
-    id: "4",
-    name: "Phạm Thanh Hà",
-    role: "Chuyên gia chăm sóc da",
-    experience: "12 năm kinh nghiệm",
-    image: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?ixlib=rb-1.2.1&auto=format&fit=crop&w=634&q=80",
-    bio: "Chuyên gia hàng đầu về chăm sóc da với 12 năm kinh nghiệm. Thành thạo nhiều kỹ thuật chăm sóc da tiên tiến từ Nhật Bản và Hàn Quốc.",
-    availability: ["Thứ 2", "Thứ 5", "Thứ 6", "Chủ nhật"]
-  },
-  {
-    id: "5",
-    name: "Ngô Quốc Anh",
-    role: "Chuyên gia trẻ hóa da",
-    experience: "9 năm kinh nghiệm",
-    image: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?ixlib=rb-1.2.1&auto=format&fit=crop&w=634&q=80",
-    bio: "Chuyên gia trẻ hóa da với 9 năm kinh nghiệm. Thành thạo các kỹ thuật trẻ hóa không xâm lấn và có chứng chỉ về công nghệ trẻ hóa da từ Mỹ.",
-    availability: ["Thứ 3", "Thứ 4", "Thứ 7", "Chủ nhật"]
-  }
-];
-
-// Specialist roles as categories
-const specialistRoles = [
-  "Tất cả",
-  "Bác sĩ da liễu",
-  "Chuyên gia điều trị mụn",
-  "Chuyên gia trị liệu", 
-  "Chuyên gia chăm sóc da",
-  "Chuyên gia trẻ hóa da"
-];
+type Specialist = Tables<'specialists'>;
 
 const Specialists = () => {
-  const [specialists, setSpecialists] = useState<Specialist[]>(specialistsList);
-  const [filteredSpecialists, setFilteredSpecialists] = useState<Specialist[]>(specialists);
+  const { specialists, loading, error } = useSpecialists();
+  const [filteredSpecialists, setFilteredSpecialists] = useState<Specialist[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRole, setSelectedRole] = useState("Tất cả");
   const [selectedSpecialist, setSelectedSpecialist] = useState<Specialist | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
+  // Lấy danh sách roles từ data
+  const specialistRoles = ["Tất cả", ...Array.from(new Set(specialists.map(s => s.role)))];
+
   // Handle search
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
-    
+    filterSpecialists(query, selectedRole);
+  };
+
+  // Handle role filter
+  const handleRoleChange = (role: string) => {
+    setSelectedRole(role);
+    filterSpecialists(searchQuery, role);
+  };
+
+  const filterSpecialists = (query: string, role: string) => {
     let filtered = specialists;
     
     if (query.trim()) {
       filtered = filtered.filter(specialist => 
         specialist.name.toLowerCase().includes(query.toLowerCase()) ||
         specialist.role.toLowerCase().includes(query.toLowerCase())
-      );
-    }
-    
-    if (selectedRole !== "Tất cả") {
-      filtered = filtered.filter(specialist => specialist.role === selectedRole);
-    }
-    
-    setFilteredSpecialists(filtered);
-  };
-
-  // Handle role filter
-  const handleRoleChange = (role: string) => {
-    setSelectedRole(role);
-    
-    let filtered = specialists;
-    
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(specialist => 
-        specialist.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        specialist.role.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
     
@@ -138,6 +74,41 @@ const Specialists = () => {
     setSelectedSpecialist(specialist);
     setIsDetailOpen(true);
   };
+
+  // Update filtered list when specialists load
+  useState(() => {
+    setFilteredSpecialists(specialists);
+  }, [specialists]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="flex items-center space-x-2">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span>Đang tải chuyên viên...</span>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-500 mb-4">Lỗi khi tải chuyên viên: {error}</p>
+            <Button onClick={() => window.location.reload()}>Thử lại</Button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -181,7 +152,7 @@ const Specialists = () => {
                 <Card key={specialist.id} className="overflow-hidden group hover:shadow-md transition-shadow">
                   <div className="aspect-square relative overflow-hidden">
                     <img 
-                      src={specialist.image}
+                      src={specialist.image_url || "https://images.unsplash.com/photo-1494790108377-be9c29b29330"}
                       alt={specialist.name}
                       className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
                     />
@@ -197,10 +168,12 @@ const Specialists = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center text-sm text-muted-foreground mb-4">
-                      <Clock className="w-4 h-4 mr-1" />
-                      <span>{specialist.experience}</span>
-                    </div>
+                    {specialist.experience && (
+                      <div className="flex items-center text-sm text-muted-foreground mb-4">
+                        <Clock className="w-4 h-4 mr-1" />
+                        <span>{specialist.experience}</span>
+                      </div>
+                    )}
                     <p className="line-clamp-2 text-gray-600">
                       {specialist.bio || "Chuyên viên giàu kinh nghiệm, luôn tận tâm với khách hàng."}
                     </p>
@@ -244,30 +217,24 @@ const Specialists = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4">
                 <div className="col-span-1">
                   <img 
-                    src={selectedSpecialist.image} 
+                    src={selectedSpecialist.image_url || "https://images.unsplash.com/photo-1494790108377-be9c29b29330"} 
                     alt={selectedSpecialist.name}
                     className="w-full h-auto rounded-lg"
                   />
                 </div>
                 <div className="col-span-2 space-y-4">
-                  <div>
-                    <h4 className="text-sm font-semibold mb-1">Kinh nghiệm</h4>
-                    <p className="text-sm">{selectedSpecialist.experience}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-semibold mb-1">Tiểu sử</h4>
-                    <p className="text-sm">{selectedSpecialist.bio}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-semibold mb-1">Lịch làm việc</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedSpecialist.availability?.map((day) => (
-                        <span key={day} className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full">
-                          {day}
-                        </span>
-                      ))}
+                  {selectedSpecialist.experience && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-1">Kinh nghiệm</h4>
+                      <p className="text-sm">{selectedSpecialist.experience}</p>
                     </div>
-                  </div>
+                  )}
+                  {selectedSpecialist.bio && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-1">Tiểu sử</h4>
+                      <p className="text-sm">{selectedSpecialist.bio}</p>
+                    </div>
+                  )}
                 </div>
               </div>
               

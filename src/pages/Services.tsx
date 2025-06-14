@@ -11,10 +11,9 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Search, Clock, Filter } from "lucide-react";
+import { Search, Clock, Filter, Loader2 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { Service } from "@/types/service";
 import { 
   Select,
   SelectContent,
@@ -28,78 +27,14 @@ import {
   TabsList, 
   TabsTrigger 
 } from "@/components/ui/tabs";
+import { useServices } from "@/hooks/useServices";
+import { Tables } from "@/integrations/supabase/types";
 
-// Same initial services as in the admin page
-const initialServices: Service[] = [
-  {
-    id: "1",
-    name: "Chăm sóc da cơ bản",
-    description: "Làm sạch, tẩy tế bào chết và dưỡng ẩm chuyên sâu",
-    price: 250000,
-    image: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881",
-    duration: 60,
-    category: "Chăm sóc da"
-  },
-  {
-    id: "2",
-    name: "Trị liệu chuyên sâu",
-    description: "Điều trị mụn, thâm nám và các vấn đề da khác",
-    price: 450000,
-    image: "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c",
-    duration: 90,
-    category: "Điều trị"
-  },
-  {
-    id: "3",
-    name: "Massage và thư giãn",
-    description: "Massage mặt và cổ theo phương pháp truyền thống",
-    price: 350000,
-    image: "https://images.unsplash.com/photo-1519823551278-64ac92734fb1",
-    duration: 45,
-    category: "Thư giãn"
-  },
-  {
-    id: "4",
-    name: "Trẻ hóa da",
-    description: "Sử dụng công nghệ hiện đại giúp làn da trẻ trung hơn",
-    price: 650000,
-    image: "https://images.unsplash.com/photo-1522337660859-02fbefca4702",
-    duration: 120,
-    category: "Trẻ hóa"
-  },
-  {
-    id: "5",
-    name: "Điều trị mụn chuyên sâu",
-    description: "Sử dụng phương pháp chuyên biệt để điều trị các loại mụn cứng đầu",
-    price: 550000,
-    image: "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9",
-    duration: 75,
-    category: "Điều trị"
-  },
-  {
-    id: "6",
-    name: "Tẩy tế bào chết toàn thân",
-    description: "Giúp làn da mịn màng, săn chắc và khỏe mạnh hơn",
-    price: 450000,
-    image: "https://images.unsplash.com/photo-1515377905703-c4788e51af15",
-    duration: 90,
-    category: "Chăm sóc da"
-  }
-];
-
-// Categories for services - same as in admin page
-const serviceCategories = [
-  "Chăm sóc da",
-  "Điều trị",
-  "Thư giãn",
-  "Trẻ hóa",
-  "Làm đẹp",
-  "Khác"
-];
+type Service = Tables<'services'>;
 
 const Services = () => {
-  const [services, setServices] = useState<Service[]>(initialServices);
-  const [filteredServices, setFilteredServices] = useState<Service[]>(services);
+  const { services, categories, loading, error } = useServices();
+  const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [sortBy, setSortBy] = useState<string>("default");
@@ -112,15 +47,16 @@ const Services = () => {
     if (searchQuery.trim()) {
       result = result.filter(service => 
         service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        service.description.toLowerCase().includes(searchQuery.toLowerCase())
+        (service.description && service.description.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
     
     // Filter by category
     if (activeCategory !== "all") {
-      result = result.filter(service => 
-        service.category === activeCategory
-      );
+      const category = categories.find(cat => cat.name === activeCategory);
+      if (category) {
+        result = result.filter(service => service.category_id === category.id);
+      }
     }
     
     // Sort services
@@ -135,12 +71,48 @@ const Services = () => {
     }
     
     setFilteredServices(result);
-  }, [searchQuery, services, activeCategory, sortBy]);
+  }, [searchQuery, services, categories, activeCategory, sortBy]);
 
   // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
   };
+
+  const getCategoryName = (categoryId: string | null) => {
+    if (!categoryId) return "Khác";
+    const category = categories.find(cat => cat.id === categoryId);
+    return category ? category.name : "Khác";
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="flex items-center space-x-2">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span>Đang tải dịch vụ...</span>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-500 mb-4">Lỗi khi tải dịch vụ: {error}</p>
+            <Button onClick={() => window.location.reload()}>Thử lại</Button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -171,9 +143,9 @@ const Services = () => {
               <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full">
                 <TabsList className="w-full h-auto flex flex-wrap">
                   <TabsTrigger value="all" className="flex-1">Tất cả</TabsTrigger>
-                  {serviceCategories.map(category => (
-                    <TabsTrigger key={category} value={category} className="flex-1">
-                      {category}
+                  {categories.map(category => (
+                    <TabsTrigger key={category.id} value={category.name} className="flex-1">
+                      {category.name}
                     </TabsTrigger>
                   ))}
                 </TabsList>
@@ -207,15 +179,13 @@ const Services = () => {
                 <Card key={service.id} className="overflow-hidden group hover:shadow-md transition-shadow">
                   <div className="aspect-video relative overflow-hidden">
                     <img 
-                      src={service.image || "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881"} 
+                      src={service.image_url || "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881"} 
                       alt={service.name}
                       className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
                     />
-                    {service.category && (
-                      <div className="absolute top-4 right-4 bg-primary/90 text-white text-xs px-2 py-1 rounded-full">
-                        {service.category}
-                      </div>
-                    )}
+                    <div className="absolute top-4 right-4 bg-primary/90 text-white text-xs px-2 py-1 rounded-full">
+                      {getCategoryName(service.category_id)}
+                    </div>
                   </div>
                   <CardHeader>
                     <CardTitle className="flex justify-between items-start">

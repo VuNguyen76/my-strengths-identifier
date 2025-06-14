@@ -5,17 +5,19 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/comp
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TIME_SLOTS } from "./constants";
 import { UseFormReturn } from "react-hook-form";
 import { BookingFormValues } from "./schema";
+import { useTimeSlots } from "@/hooks/useTimeSlots";
 
 interface DateTimeSelectProps {
   form: UseFormReturn<BookingFormValues>;
 }
 
 export const DateTimeSelect = ({ form }: DateTimeSelectProps) => {
+  const { timeSlots, loading, error } = useTimeSlots();
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <FormField
@@ -70,15 +72,26 @@ export const DateTimeSelect = ({ form }: DateTimeSelectProps) => {
             <Select onValueChange={field.onChange} defaultValue={field.value}>
               <FormControl>
                 <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Chọn giờ" />
+                  {loading ? (
+                    <div className="flex items-center">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span>Đang tải...</span>
+                    </div>
+                  ) : (
+                    <SelectValue placeholder="Chọn giờ" />
+                  )}
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                {TIME_SLOTS.map((time) => (
-                  <SelectItem key={time} value={time}>
-                    {time}
-                  </SelectItem>
-                ))}
+                {error ? (
+                  <div className="p-2 text-red-500 text-sm">Lỗi khi tải giờ: {error}</div>
+                ) : (
+                  timeSlots.map((slot) => (
+                    <SelectItem key={slot.id} value={slot.time}>
+                      {slot.time}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
             <FormMessage />
