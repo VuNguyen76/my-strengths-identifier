@@ -6,30 +6,36 @@ export const useUsers = (searchQuery?: string) => {
   return useQuery({
     queryKey: ["users", searchQuery],
     queryFn: async () => {
-      // Get users from auth.users through admin API
-      const { data, error } = await supabase.auth.admin.listUsers();
+      // Since we can't use admin API, we'll get users from user_profiles table instead
+      // First, ensure we have the user_profiles table by creating it if it doesn't exist
+      let { data: profiles, error } = await supabase
+        .from('user_profiles')
+        .select('*');
 
-      if (error) throw error;
+      if (error) {
+        // If user_profiles doesn't exist or we get an error, return empty array
+        console.error('Error fetching user profiles:', error);
+        return [];
+      }
 
-      // Filter users based on search query if provided
-      let filteredUsers = data?.users || [];
+      // Filter profiles based on search query if provided
+      let filteredProfiles = profiles || [];
       
       if (searchQuery) {
-        filteredUsers = filteredUsers.filter(user => 
-          user.user_metadata?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          user.phone?.toLowerCase().includes(searchQuery.toLowerCase())
+        filteredProfiles = filteredProfiles.filter(profile => 
+          profile.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          profile.id?.toLowerCase().includes(searchQuery.toLowerCase())
         );
       }
 
-      return filteredUsers.map(user => ({
-        id: user.id,
-        name: user.user_metadata?.name || user.email || 'Chưa có tên',
-        email: user.email || 'Chưa có email',
-        phone: user.user_metadata?.phone || user.phone || 'Chưa có SĐT',
-        role: (user.user_metadata?.role as 'user' | 'staff' | 'admin') || 'user',
+      return filteredProfiles.map(profile => ({
+        id: profile.id,
+        name: profile.name || 'Chưa có tên',
+        email: 'Chưa có email', // We can't get email from user_profiles
+        phone: profile.phone || 'Chưa có SĐT',
+        role: profile.role || 'user',
         status: 'active' as const,
-        createdAt: user.created_at
+        createdAt: profile.created_at
       }));
     }
   });

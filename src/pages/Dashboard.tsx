@@ -24,24 +24,14 @@ const Dashboard = () => {
 
         setUser(session.user);
 
-        // Fetch user profile
-        const { data: profile, error } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching user profile:', error);
-        } else if (profile) {
-          setUserProfile(profile);
-          
-          // Redirect based on role
-          if (profile.role === "admin") {
-            navigate("/admin");
-          } else {
-            navigate("/dashboard");
-          }
+        // Fetch user profile from user_metadata instead of user_profiles table
+        const userRole = session.user.user_metadata?.role || 'user';
+        
+        // Redirect based on role from user_metadata
+        if (userRole === "admin") {
+          navigate("/admin");
+        } else {
+          navigate("/dashboard");
         }
       } catch (error) {
         console.error("Error checking user:", error);

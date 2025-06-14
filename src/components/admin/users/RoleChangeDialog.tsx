@@ -40,20 +40,20 @@ const RoleChangeDialog = ({ isOpen, onOpenChange, user }: RoleChangeDialogProps)
     const newRole = formData.get('new-role') as 'user' | 'staff' | 'admin';
 
     try {
-      // Update user metadata through admin API
-      const { error } = await supabase.auth.admin.updateUserById(user.id, {
-        user_metadata: { 
-          role: newRole,
-          name: user.name,
-          phone: user.phone
-        }
-      });
+      // Update user profile in user_profiles table
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update({ role: newRole })
+        .eq('id', user.id);
 
-      if (error) throw error;
+      if (profileError) {
+        throw profileError;
+      }
 
       toast.success(`Đã thay đổi vai trò của ${user.name} thành công`);
       onOpenChange(false);
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-roles"] });
     } catch (error: any) {
       toast.error("Có lỗi xảy ra: " + error.message);
     }

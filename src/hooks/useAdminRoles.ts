@@ -3,27 +3,61 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-// Define the user type from Supabase Auth
-type AuthUser = {
-  id: string;
-  email?: string;
-  user_metadata?: {
-    role?: string;
-    name?: string;
-    phone?: string;
-  };
-  created_at: string;
-};
-
 export const useAdminRoles = () => {
   return useQuery({
     queryKey: ["admin-roles"],
     queryFn: async () => {
-      // Get users from auth to count roles
-      const { data: authData } = await supabase.auth.admin.listUsers();
+      // Get users from user_profiles to count roles instead of auth.admin
+      const { data: profiles, error } = await supabase
+        .from('user_profiles')
+        .select('role');
 
-      const roleCounts: Record<string, number> = (authData?.users as AuthUser[] || []).reduce((acc: Record<string, number>, user: AuthUser) => {
-        const role = user.user_metadata?.role || 'user';
+      if (error) {
+        console.error('Error fetching user profiles for role counts:', error);
+        // Return default roles with zero counts if we can't fetch data
+        return [
+          {
+            id: "1",
+            name: "Admin",
+            description: "Quản trị viên hệ thống có toàn quyền truy cập",
+            userCount: 0,
+            permissions: [
+              "users_view", "users_create", "users_edit", "users_delete",
+              "services_view", "services_create", "services_edit", "services_delete",
+              "bookings_view", "bookings_create", "bookings_edit", "bookings_delete",
+              "reports_view", "transactions_view", "transactions_create",
+              "staff_view", "staff_create", "staff_edit", "staff_delete",
+              "blogs_view", "blogs_create", "blogs_edit", "blogs_delete",
+              "settings_edit"
+            ],
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: "2", 
+            name: "Staff",
+            description: "Nhân viên có quyền hạn chế",
+            userCount: 0,
+            permissions: [
+              "users_view", "services_view", "bookings_view", 
+              "bookings_create", "bookings_edit", "staff_view"
+            ],
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: "3",
+            name: "User", 
+            description: "Người dùng thông thường",
+            userCount: 0,
+            permissions: [
+              "bookings_view", "bookings_create"
+            ],
+            createdAt: new Date().toISOString(),
+          },
+        ];
+      }
+
+      const roleCounts: Record<string, number> = (profiles || []).reduce((acc: Record<string, number>, profile: any) => {
+        const role = profile.role || 'user';
         acc[role] = (acc[role] || 0) + 1;
         return acc;
       }, {});

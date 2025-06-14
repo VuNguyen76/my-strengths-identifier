@@ -52,7 +52,8 @@ const AddUserDialog = ({ isOpen, onOpenChange }: AddUserDialogProps) => {
             name,
             phone,
             role: 'user'
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/`
         }
       });
 
@@ -66,6 +67,21 @@ const AddUserDialog = ({ isOpen, onOpenChange }: AddUserDialogProps) => {
       }
 
       if (authData.user) {
+        // Also create user profile in user_profiles table
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: authData.user.id,
+            name,
+            phone,
+            role: 'user'
+          });
+
+        if (profileError) {
+          console.error('Error creating user profile:', profileError);
+          // Don't show error to user as the auth user was created successfully
+        }
+
         toast.success("Người dùng mới đã được thêm thành công");
         onOpenChange(false);
         queryClient.invalidateQueries({ queryKey: ["users"] });
