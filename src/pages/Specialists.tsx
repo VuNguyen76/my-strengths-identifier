@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Card, 
   CardContent, 
@@ -76,7 +75,7 @@ const Specialists = () => {
   };
 
   // Update filtered list when specialists load
-  useState(() => {
+  useEffect(() => {
     setFilteredSpecialists(specialists);
   }, [specialists]);
 
