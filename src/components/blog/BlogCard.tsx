@@ -13,50 +13,63 @@ interface BlogCardProps {
 const BlogCard = ({ post }: BlogCardProps) => {
   const calculateReadTime = (content: string | null): number => {
     if (!content) return 5;
-    const wordsPerMinute = 200;
+    const wordsPerMinute = 200; // Average Vietnamese reading speed
     const wordCount = content.replace(/<[^>]*>/g, '').split(/\s+/).length;
     return Math.ceil(wordCount / wordsPerMinute) || 5;
   };
 
   const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('vi-VN');
+    return new Date(dateString).toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
   };
 
+  // Use fallback image from database or default
+  const imageUrl = post.image_url || "/placeholder.svg";
+
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+    <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 h-full flex flex-col">
       <div className="h-48 overflow-hidden">
         <img 
-          src={post.image_url || "https://via.placeholder.com/400x200"} 
+          src={imageUrl}
           alt={post.title} 
-          className="w-full h-full object-cover transition-transform hover:scale-105"
+          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = "/placeholder.svg";
+          }}
         />
       </div>
-      <CardHeader>
-        <div className="flex justify-between items-center mb-2">
-          <Badge variant="outline">
+      <CardHeader className="flex-grow">
+        <div className="flex justify-between items-start mb-2">
+          <Badge variant="outline" className="shrink-0">
             {post.blog_categories?.name || "Chưa phân loại"}
           </Badge>
-          <div className="flex items-center text-sm text-muted-foreground">
+          <div className="flex items-center text-xs text-muted-foreground ml-2">
             <Clock className="h-3 w-3 mr-1" />
-            <span>{calculateReadTime(post.content)} phút đọc</span>
+            <span>{calculateReadTime(post.content)} phút</span>
           </div>
         </div>
-        <CardTitle className="line-clamp-2">{post.title}</CardTitle>
-        <CardDescription className="line-clamp-3">
-          {post.description || "Không có mô tả"}
+        <CardTitle className="line-clamp-2 text-lg leading-tight">
+          {post.title}
+        </CardTitle>
+        <CardDescription className="line-clamp-3 text-sm">
+          {post.description || "Khám phá nội dung thú vị trong bài viết này..."}
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="flex items-center text-sm text-muted-foreground">
+      <CardContent className="pt-0">
+        <div className="flex items-center text-xs text-muted-foreground">
           <Calendar className="h-3 w-3 mr-1" />
           <span>{formatDate(post.created_at)}</span>
           <span className="mx-2">•</span>
           <User className="h-3 w-3 mr-1" />
-          <span>{post.author}</span>
+          <span className="truncate">{post.author}</span>
         </div>
       </CardContent>
-      <CardFooter>
-        <Button asChild variant="link" className="px-0">
+      <CardFooter className="pt-0">
+        <Button asChild variant="default" className="w-full" size="sm">
           <Link to={`/blog/${post.id}`}>Đọc tiếp</Link>
         </Button>
       </CardFooter>

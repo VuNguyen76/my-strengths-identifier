@@ -17,7 +17,7 @@ const BlogDetail = () => {
   
   const { data: relatedPosts = [] } = useBlogs({
     categoryId: post?.category_id || undefined,
-    limit: 3,
+    limit: 4, // Increase limit to get more related posts
   });
 
   const filteredRelatedPosts = relatedPosts.filter(p => p.id !== id);
@@ -35,13 +35,24 @@ const BlogDetail = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <BlogDetailHeader post={post} />
-        <BlogDetailImage imageUrl={post.image_url} title={post.title} />
-        <BlogDetailActions />
-        <BlogDetailContent content={post.content} />
-        <BlogDetailRelated relatedPosts={filteredRelatedPosts} />
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Navigation and actions */}
+          <BlogDetailActions />
+          
+          {/* Article content */}
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <BlogDetailHeader post={post} />
+            <BlogDetailImage imageUrl={post.image_url} title={post.title} />
+            <div className="px-8 pb-8">
+              <BlogDetailContent content={post.content} />
+            </div>
+          </div>
+          
+          {/* Related posts */}
+          <BlogDetailRelated relatedPosts={filteredRelatedPosts} />
+        </div>
       </div>
     </div>
   );
