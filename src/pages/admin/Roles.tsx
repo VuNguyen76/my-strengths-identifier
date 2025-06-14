@@ -1,10 +1,8 @@
-
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { PlusCircle, Edit, Trash2, ShieldCheck, AlertCircle } from "lucide-react";
-import { toast } from "sonner";
+import { PlusCircle, Edit, Trash2, AlertCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,7 +45,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-import { useAdminRoles, useCreateRole, useUpdateRole, useDeleteRole } from "@/hooks/useAdminRoles";
+import { useAdminRoles, useCreateRole, useUpdateRole, useDeleteRole, usePermissions } from "@/hooks/useAdminRoles";
 
 // Define role schema
 const roleFormSchema = z.object({
@@ -109,14 +107,15 @@ const Roles = () => {
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
 
   const { data: roles = [], isLoading, error } = useAdminRoles();
+  const { data: permissions = [] } = usePermissions();
   const createRole = useCreateRole();
   const updateRole = useUpdateRole();
   const deleteRole = useDeleteRole();
 
   // Group permissions by category
-  const groupedPermissions = defaultPermissions.reduce<Record<string, typeof defaultPermissions>>(
+  const groupedPermissions = permissions.reduce<Record<string, typeof permissions>>(
     (groups, permission) => {
-      const group = permission.group;
+      const group = permission.group_name;
       if (!groups[group]) {
         groups[group] = [];
       }
@@ -210,7 +209,7 @@ const Roles = () => {
   };
 
   const handleSelectAllInGroup = (group: string, isChecked: boolean) => {
-    const groupPermissionIds = groupedPermissions[group].map(p => p.id);
+    const groupPermissionIds = groupedPermissions[group].map(p => p.name);
     
     if (isChecked) {
       // Add all permissions from this group that aren't already selected
@@ -228,12 +227,12 @@ const Roles = () => {
   };
 
   const isGroupFullySelected = (group: string) => {
-    const groupPermissionIds = groupedPermissions[group].map(p => p.id);
+    const groupPermissionIds = groupedPermissions[group].map(p => p.name);
     return groupPermissionIds.every(id => selectedPermissions.includes(id));
   };
 
   const isGroupPartiallySelected = (group: string) => {
-    const groupPermissionIds = groupedPermissions[group].map(p => p.id);
+    const groupPermissionIds = groupedPermissions[group].map(p => p.name);
     return groupPermissionIds.some(id => selectedPermissions.includes(id)) && 
            !groupPermissionIds.every(id => selectedPermissions.includes(id));
   };
@@ -282,8 +281,8 @@ const Roles = () => {
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          <strong>Lưu ý:</strong> Hiện tại hệ thống đang sử dụng vai trò cơ bản từ bảng user_profiles. 
-          Để có chức năng phân quyền đầy đủ, cần tạo bảng roles và permissions riêng trong database.
+          <strong>Hệ thống phân quyền đã được kích hoạt!</strong> Bạn có thể tạo vai trò mới với các quyền hạn tùy chỉnh. 
+          Hệ thống sẽ đồng bộ với cả role cũ (user/staff/admin) và role mới.
         </AlertDescription>
       </Alert>
 
@@ -323,7 +322,7 @@ const Roles = () => {
                         size="sm"
                         className="text-destructive"
                         onClick={() => openDeleteDialog(role)}
-                        disabled={role.id === "1" || role.id === "2" || role.id === "3"}
+                        disabled={['Admin', 'Staff', 'User'].includes(role.name)}
                       >
                         <Trash2 className="h-4 w-4 mr-1" /> Xóa
                       </Button>
@@ -377,7 +376,7 @@ const Roles = () => {
               <div>
                 <Label>Phân quyền</Label>
                 <div className="mt-2 border rounded-md p-4 max-h-[300px] overflow-y-auto">
-                  {Object.entries(groupedPermissions).map(([group, permissions]) => (
+                  {Object.entries(groupedPermissions).map(([group, groupPermissions]) => (
                     <div key={group} className="mb-4">
                       <div className="flex items-center mb-2">
                         <Checkbox 
@@ -394,17 +393,17 @@ const Roles = () => {
                         </Label>
                       </div>
                       <div className="pl-6 grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {permissions.map((permission) => (
+                        {groupPermissions.map((permission) => (
                           <div key={permission.id} className="flex items-center">
                             <Checkbox 
                               id={`add-${permission.id}`}
-                              checked={selectedPermissions.includes(permission.id)}
+                              checked={selectedPermissions.includes(permission.name)}
                               onCheckedChange={(checked) => 
-                                handlePermissionChange(permission.id, checked === true)
+                                handlePermissionChange(permission.name, checked === true)
                               }
                               className="mr-2"
                             />
-                            <Label htmlFor={`add-${permission.id}`}>{permission.name}</Label>
+                            <Label htmlFor={`add-${permission.id}`}>{permission.description}</Label>
                           </div>
                         ))}
                       </div>
@@ -445,20 +444,20 @@ const Roles = () => {
             <div>
               <Label>Phân quyền</Label>
               <div className="mt-2 border rounded-md p-4 max-h-[300px] overflow-y-auto">
-                {Object.entries(groupedPermissions).map(([group, permissions]) => (
+                {Object.entries(groupedPermissions).map(([group, groupPermissions]) => (
                   <div key={group} className="mb-4">
                     <div className="flex items-center mb-2">
                       <Label className="font-bold">{group}</Label>
                     </div>
                     <div className="pl-4 grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {permissions.map((permission) => (
+                      {groupPermissions.map((permission) => (
                         <div key={permission.id} className="flex items-center">
                           <Checkbox 
-                            checked={currentRole?.permissions.includes(permission.id)}
+                            checked={currentRole?.permissions.includes(permission.name)}
                             disabled
                             className="mr-2"
                           />
-                          <Label>{permission.name}</Label>
+                          <Label>{permission.description}</Label>
                         </div>
                       ))}
                     </div>

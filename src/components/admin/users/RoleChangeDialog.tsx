@@ -1,4 +1,3 @@
-
 import {
   Dialog,
   DialogContent,
@@ -12,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAdminRoles } from "@/hooks/useAdminRoles";
 
 interface User {
   id: string;
@@ -31,23 +31,58 @@ interface RoleChangeDialogProps {
 
 const RoleChangeDialog = ({ isOpen, onOpenChange, user }: RoleChangeDialogProps) => {
   const queryClient = useQueryClient();
+  const { data: roles = [] } = useAdminRoles();
 
   const handleChangeRole = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
     const formData = new FormData(e.target as HTMLFormElement);
-    const newRole = formData.get('new-role') as 'user' | 'staff' | 'admin';
+    const selectedRoleId = formData.get('new-role') as string;
+    const isLegacyRole = ['user', 'staff', 'admin'].includes(selectedRoleId);
 
     try {
-      // Update user profile in user_profiles table
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .update({ role: newRole })
-        .eq('id', user.id);
+      if (isLegacyRole) {
+        // Update legacy role in user_profiles table
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .update({ role: selectedRoleId as 'user' | 'staff' | 'admin' })
+          .eq('id', user.id);
 
-      if (profileError) {
-        throw profileError;
+        if (profileError) {
+          throw profileError;
+        }
+      } else {
+        // Handle new role system
+        // First remove any existing role assignments
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', user.id);
+
+        // Add new role assignment
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: user.id,
+            role_id: selectedRoleId,
+            assigned_by: (await supabase.auth.getUser()).data.user?.id
+          });
+
+        if (roleError) {
+          throw roleError;
+        }
+
+        // Also update user_profiles to keep legacy system in sync
+        const selectedRole = roles.find(r => r.id === selectedRoleId);
+        if (selectedRole) {
+          await supabase
+            .from('user_profiles')
+            .update({ 
+              role: selectedRole.name.toLowerCase() as 'user' | 'staff' | 'admin' 
+            })
+            .eq('id', user.id);
+        }
       }
 
       toast.success(`Đã thay đổi vai trò của ${user.name} thành công`);
@@ -78,9 +113,20 @@ const RoleChangeDialog = ({ isOpen, onOpenChange, user }: RoleChangeDialogProps)
                 className="w-full p-2 border rounded-md"
                 defaultValue={user?.role}
               >
-                <option value="user">Người dùng</option>
-                <option value="staff">Staff</option>
-                <option value="admin">Admin</option>
+                <optgroup label="Vai trò hệ thống">
+                  <option value="user">Người dùng</option>
+                  <option value="staff">Staff</option>
+                  <option value="admin">Admin</option>
+                </optgroup>
+                {roles.length > 0 && (
+                  <optgroup label="Vai trò tùy chỉnh">
+                    {roles.map((role) => (
+                      <option key={role.id} value={role.id}>
+                        {role.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
           </div>

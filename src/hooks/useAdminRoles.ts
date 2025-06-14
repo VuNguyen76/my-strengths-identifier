@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -56,43 +55,70 @@ export const useAdminRoles = () => {
           throw permissionsError;
         }
 
-        // Fetch user counts for each role from user_profiles
+        // Fetch user counts for each role from user_roles table
+        const { data: userRoles, error: userRolesError } = await supabase
+          .from('user_roles')
+          .select(`
+            role_id,
+            roles!inner(name)
+          `);
+
+        if (userRolesError) {
+          console.error('Error fetching user roles:', userRolesError);
+        }
+
+        // Also fetch from user_profiles for legacy role system
         const { data: userProfiles, error: profilesError } = await supabase
           .from('user_profiles')
           .select('role');
 
         if (profilesError) {
           console.error('Error fetching user profiles:', profilesError);
-          // Don't throw error here, just use empty array
         }
 
-        // Count users by role
-        const roleCounts: Record<string, number> = (userProfiles || []).reduce((acc: Record<string, number>, profile: any) => {
-          const role = profile.role || 'user';
-          acc[role] = (acc[role] || 0) + 1;
-          return acc;
-        }, {});
+        // Count users by role from both systems
+        const newSystemCounts: Record<string, number> = {};
+        if (userRoles) {
+          userRoles.forEach((ur: any) => {
+            const roleName = ur.roles?.name;
+            if (roleName) {
+              newSystemCounts[roleName] = (newSystemCounts[roleName] || 0) + 1;
+            }
+          });
+        }
+
+        const legacySystemCounts: Record<string, number> = {};
+        if (userProfiles) {
+          userProfiles.forEach((profile: any) => {
+            const role = profile.role || 'user';
+            legacySystemCounts[role] = (legacySystemCounts[role] || 0) + 1;
+          });
+        }
 
         // Create permission mapping
         const permissionMap = new Map(permissions?.map(p => [p.id, p.name]) || []);
 
         // Transform roles data
-        const transformedRoles: Role[] = (roles || []).map((role: any) => ({
-          id: role.id,
-          name: role.name,
-          description: role.description || '',
-          userCount: roleCounts[role.name.toLowerCase()] || 0,
-          permissions: (role.role_permissions || []).map((rp: RolePermission) => 
-            permissionMap.get(rp.permission_id) || ''
-          ).filter(Boolean),
-          createdAt: role.created_at
-        }));
+        const transformedRoles: Role[] = (roles || []).map((role: any) => {
+          // Use new system count if available, otherwise fall back to legacy system
+          const userCount = newSystemCounts[role.name] || legacySystemCounts[role.name.toLowerCase()] || 0;
+          
+          return {
+            id: role.id,
+            name: role.name,
+            description: role.description || '',
+            userCount,
+            permissions: (role.role_permissions || []).map((rp: RolePermission) => 
+              permissionMap.get(rp.permission_id) || ''
+            ).filter(Boolean),
+            createdAt: role.created_at
+          };
+        });
 
         return transformedRoles;
 
       } catch (error) {
         console.error('Error in useAdminRoles:', error);
-        // Return empty array on error
         return [];
       }
     }
