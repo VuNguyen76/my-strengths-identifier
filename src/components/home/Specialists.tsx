@@ -1,34 +1,28 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+
 import { useSpecialists } from "@/hooks/useSpecialists";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Star } from "lucide-react";
 
 const Specialists = () => {
   const { specialists, loading } = useSpecialists();
 
   if (loading) {
     return (
-      <section className="py-20 bg-gray-50">
+      <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Đội Ngũ Chuyên Viên</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Đội ngũ chuyên viên giàu kinh nghiệm, tận tâm chăm sóc làn da của bạn
-            </p>
+            <h2 className="text-3xl font-bold mb-4">Đội ngũ chuyên gia</h2>
+            <p className="text-gray-600">Gặp gỡ các chuyên gia hàng đầu về chăm sóc da</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
-              <Card key={i} className="text-center hover:shadow-lg transition-shadow animate-pulse">
-                <CardHeader>
-                  <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-4"></div>
-                  <div className="h-6 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-4 bg-gray-200 rounded mb-4"></div>
-                  <div className="h-10 bg-gray-200 rounded"></div>
-                </CardContent>
-              </Card>
+              <div key={i} className="bg-white rounded-lg p-6 animate-pulse">
+                <div className="w-20 h-20 bg-gray-200 rounded-full mx-auto mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded mb-4 w-3/4 mx-auto"></div>
+                <div className="h-20 bg-gray-200 rounded"></div>
+              </div>
             ))}
           </div>
         </div>
@@ -37,48 +31,39 @@ const Specialists = () => {
   }
 
   return (
-    <section className="py-20 bg-gray-50">
+    <section className="py-16">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Đội Ngũ Chuyên Viên</h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Đội ngũ chuyên viên giàu kinh nghiệm, tận tâm chăm sóc làn da của bạn
-          </p>
+          <h2 className="text-3xl font-bold mb-4">Đội ngũ chuyên gia</h2>
+          <p className="text-gray-600">Gặp gỡ các chuyên gia hàng đầu về chăm sóc da</p>
         </div>
-        
-        <div className="grid md:grid-cols-3 gap-8">
-          {specialists.slice(0, 3).map((specialist) => (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {specialists.slice(0, 6).map((specialist) => (
             <Card key={specialist.id} className="text-center hover:shadow-lg transition-shadow">
               <CardHeader>
-                <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4">
+                <div className="w-20 h-20 mx-auto mb-4 overflow-hidden rounded-full">
                   <img 
-                    src={specialist.image_url || "https://via.placeholder.com/96"}
+                    src={specialist.image_url || "https://via.placeholder.com/80x80"} 
                     alt={specialist.name}
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <CardTitle className="text-xl mb-2">{specialist.name}</CardTitle>
-                <CardDescription className="text-primary font-medium">
-                  {specialist.role}
-                </CardDescription>
+                <CardTitle className="text-lg">{specialist.name}</CardTitle>
+                <CardDescription>{specialist.role}</CardDescription>
+                <Badge variant="secondary" className="w-fit mx-auto">
+                  {specialist.experience}
+                </Badge>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600 mb-2">{specialist.experience}</p>
-                <p className="text-sm text-gray-500 mb-4 line-clamp-3">
-                  {specialist.bio}
-                </p>
-                <Button variant="outline" className="w-full" asChild>
-                  <Link to="/specialists">Xem chi tiết</Link>
-                </Button>
+                <div className="flex justify-center items-center mb-2">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                <p className="text-sm text-gray-600 line-clamp-3">{specialist.bio}</p>
               </CardContent>
             </Card>
           ))}
-        </div>
-        
-        <div className="text-center mt-12">
-          <Button size="lg" asChild>
-            <Link to="/specialists">Xem tất cả chuyên viên</Link>
-          </Button>
         </div>
       </div>
     </section>
