@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -109,7 +108,7 @@ const AdminUsers = () => {
     if (!selectedUser) return;
 
     const formData = new FormData(e.target as HTMLFormElement);
-    const newRole = formData.get('new-role') as string;
+    const newRole = formData.get('new-role') as 'user' | 'staff' | 'admin';
 
     try {
       const { error } = await supabase
