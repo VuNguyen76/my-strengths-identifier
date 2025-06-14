@@ -3,104 +3,98 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+interface Role {
+  id: string;
+  name: string;
+  description: string;
+  userCount: number;
+  permissions: string[];
+  createdAt: string;
+}
+
+interface Permission {
+  id: string;
+  name: string;
+  description: string;
+  group_name: string;
+}
+
+interface RolePermission {
+  permission_id: string;
+}
+
 export const useAdminRoles = () => {
   return useQuery({
     queryKey: ["admin-roles"],
     queryFn: async () => {
-      // Get users from user_profiles to count roles instead of auth.admin
-      const { data: profiles, error } = await supabase
-        .from('user_profiles')
-        .select('role');
+      try {
+        // Fetch roles with their permissions
+        const { data: roles, error: rolesError } = await supabase
+          .from('roles')
+          .select(`
+            id,
+            name,
+            description,
+            created_at,
+            role_permissions (
+              permission_id
+            )
+          `);
 
-      if (error) {
-        console.error('Error fetching user profiles for role counts:', error);
-        // Return default roles with zero counts if we can't fetch data
-        return [
-          {
-            id: "1",
-            name: "Admin",
-            description: "Quản trị viên hệ thống có toàn quyền truy cập",
-            userCount: 0,
-            permissions: [
-              "users_view", "users_create", "users_edit", "users_delete",
-              "services_view", "services_create", "services_edit", "services_delete",
-              "bookings_view", "bookings_create", "bookings_edit", "bookings_delete",
-              "reports_view", "transactions_view", "transactions_create",
-              "staff_view", "staff_create", "staff_edit", "staff_delete",
-              "blogs_view", "blogs_create", "blogs_edit", "blogs_delete",
-              "settings_edit"
-            ],
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: "2", 
-            name: "Staff",
-            description: "Nhân viên có quyền hạn chế",
-            userCount: 0,
-            permissions: [
-              "users_view", "services_view", "bookings_view", 
-              "bookings_create", "bookings_edit", "staff_view"
-            ],
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: "3",
-            name: "User", 
-            description: "Người dùng thông thường",
-            userCount: 0,
-            permissions: [
-              "bookings_view", "bookings_create"
-            ],
-            createdAt: new Date().toISOString(),
-          },
-        ];
+        if (rolesError) {
+          console.error('Error fetching roles:', rolesError);
+          throw rolesError;
+        }
+
+        // Fetch all permissions for mapping
+        const { data: permissions, error: permissionsError } = await supabase
+          .from('permissions')
+          .select('id, name');
+
+        if (permissionsError) {
+          console.error('Error fetching permissions:', permissionsError);
+          throw permissionsError;
+        }
+
+        // Fetch user counts for each role from user_profiles
+        const { data: userProfiles, error: profilesError } = await supabase
+          .from('user_profiles')
+          .select('role');
+
+        if (profilesError) {
+          console.error('Error fetching user profiles:', profilesError);
+          // Don't throw error here, just use empty array
+        }
+
+        // Count users by role
+        const roleCounts: Record<string, number> = (userProfiles || []).reduce((acc: Record<string, number>, profile: any) => {
+          const role = profile.role || 'user';
+          acc[role] = (acc[role] || 0) + 1;
+          return acc;
+        }, {});
+
+        // Create permission mapping
+        const permissionMap = new Map(permissions?.map(p => [p.id, p.name]) || []);
+
+        // Transform roles data
+        const transformedRoles: Role[] = (roles || []).map((role: any) => ({
+          id: role.id,
+          name: role.name,
+          description: role.description || '',
+          userCount: roleCounts[role.name.toLowerCase()] || 0,
+          permissions: (role.role_permissions || []).map((rp: RolePermission) => 
+            permissionMap.get(rp.permission_id) || ''
+          ).filter(Boolean),
+          createdAt: role.created_at
+        }));
+
+        return transformedRoles;
+
+      } catch (error) {
+        console.error('Error in useAdminRoles:', error);
+        // Return empty array on error
+        return [];
       }
-
-      const roleCounts: Record<string, number> = (profiles || []).reduce((acc: Record<string, number>, profile: any) => {
-        const role = profile.role || 'user';
-        acc[role] = (acc[role] || 0) + 1;
-        return acc;
-      }, {});
-
-      return [
-        {
-          id: "1",
-          name: "Admin",
-          description: "Quản trị viên hệ thống có toàn quyền truy cập",
-          userCount: roleCounts['admin'] || 0,
-          permissions: [
-            "users_view", "users_create", "users_edit", "users_delete",
-            "services_view", "services_create", "services_edit", "services_delete",
-            "bookings_view", "bookings_create", "bookings_edit", "bookings_delete",
-            "reports_view", "transactions_view", "transactions_create",
-            "staff_view", "staff_create", "staff_edit", "staff_delete",
-            "blogs_view", "blogs_create", "blogs_edit", "blogs_delete",
-            "settings_edit"
-          ],
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: "2", 
-          name: "Staff",
-          description: "Nhân viên có quyền hạn chế",
-          userCount: roleCounts['staff'] || 0,
-          permissions: [
-            "users_view", "services_view", "bookings_view", 
-            "bookings_create", "bookings_edit", "staff_view"
-          ],
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: "3",
-          name: "User", 
-          description: "Người dùng thông thường",
-          userCount: roleCounts['user'] || 0,
-          permissions: [
-            "bookings_view", "bookings_create"
-          ],
-          createdAt: new Date().toISOString(),
-        },
-      ];
     }
   });
 };
@@ -110,13 +104,54 @@ export const useCreateRole = () => {
   
   return useMutation({
     mutationFn: async (roleData: { name: string; description: string; permissions: string[] }) => {
-      throw new Error("Chức năng tạo vai trò mới sẽ được triển khai khi có bảng roles trong database");
+      // Create the role
+      const { data: role, error: roleError } = await supabase
+        .from('roles')
+        .insert({
+          name: roleData.name,
+          description: roleData.description
+        })
+        .select()
+        .single();
+
+      if (roleError) {
+        throw roleError;
+      }
+
+      // Get permission IDs from permission names
+      const { data: permissions, error: permissionsError } = await supabase
+        .from('permissions')
+        .select('id, name')
+        .in('name', roleData.permissions);
+
+      if (permissionsError) {
+        throw permissionsError;
+      }
+
+      // Create role-permission relationships
+      if (permissions && permissions.length > 0) {
+        const rolePermissions = permissions.map(permission => ({
+          role_id: role.id,
+          permission_id: permission.id
+        }));
+
+        const { error: rolePermissionsError } = await supabase
+          .from('role_permissions')
+          .insert(rolePermissions);
+
+        if (rolePermissionsError) {
+          throw rolePermissionsError;
+        }
+      }
+
+      return role;
     },
     onSuccess: () => {
       toast.success("Tạo vai trò thành công!");
       queryClient.invalidateQueries({ queryKey: ["admin-roles"] });
     },
     onError: (error: any) => {
+      console.error('Create role error:', error);
       toast.error(error.message || "Có lỗi xảy ra khi tạo vai trò");
     },
   });
@@ -127,13 +162,61 @@ export const useUpdateRole = () => {
   
   return useMutation({
     mutationFn: async ({ id, ...roleData }: { id: string; name: string; description: string; permissions: string[] }) => {
-      throw new Error("Chức năng cập nhật vai trò sẽ được triển khai khi có bảng roles trong database");
+      // Update the role
+      const { error: roleError } = await supabase
+        .from('roles')
+        .update({
+          name: roleData.name,
+          description: roleData.description
+        })
+        .eq('id', id);
+
+      if (roleError) {
+        throw roleError;
+      }
+
+      // Delete existing role-permission relationships
+      const { error: deleteError } = await supabase
+        .from('role_permissions')
+        .delete()
+        .eq('role_id', id);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      // Get permission IDs from permission names
+      const { data: permissions, error: permissionsError } = await supabase
+        .from('permissions')
+        .select('id, name')
+        .in('name', roleData.permissions);
+
+      if (permissionsError) {
+        throw permissionsError;
+      }
+
+      // Create new role-permission relationships
+      if (permissions && permissions.length > 0) {
+        const rolePermissions = permissions.map(permission => ({
+          role_id: id,
+          permission_id: permission.id
+        }));
+
+        const { error: rolePermissionsError } = await supabase
+          .from('role_permissions')
+          .insert(rolePermissions);
+
+        if (rolePermissionsError) {
+          throw rolePermissionsError;
+        }
+      }
     },
     onSuccess: () => {
       toast.success("Cập nhật vai trò thành công!");
       queryClient.invalidateQueries({ queryKey: ["admin-roles"] });
     },
     onError: (error: any) => {
+      console.error('Update role error:', error);
       toast.error(error.message || "Có lỗi xảy ra khi cập nhật vai trò");
     },
   });
@@ -144,14 +227,56 @@ export const useDeleteRole = () => {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      throw new Error("Chức năng xóa vai trò sẽ được triển khai khi có bảng roles trong database");
+      // Check if role is being used by any users
+      const { data: userRoles, error: checkError } = await supabase
+        .from('user_roles')
+        .select('id')
+        .eq('role_id', id)
+        .limit(1);
+
+      if (checkError) {
+        throw checkError;
+      }
+
+      if (userRoles && userRoles.length > 0) {
+        throw new Error("Không thể xóa vai trò đang được sử dụng bởi người dùng");
+      }
+
+      // Delete the role (role_permissions will be deleted automatically due to CASCADE)
+      const { error } = await supabase
+        .from('roles')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        throw error;
+      }
     },
     onSuccess: () => {
       toast.success("Xóa vai trò thành công!");
       queryClient.invalidateQueries({ queryKey: ["admin-roles"] });
     },
     onError: (error: any) => {
+      console.error('Delete role error:', error);
       toast.error(error.message || "Có lỗi xảy ra khi xóa vai trò");
     },
+  });
+};
+
+export const usePermissions = () => {
+  return useQuery({
+    queryKey: ["permissions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('permissions')
+        .select('*')
+        .order('group_name, name');
+
+      if (error) {
+        throw error;
+      }
+
+      return data as Permission[];
+    }
   });
 };
