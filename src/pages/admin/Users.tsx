@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -65,7 +64,7 @@ const AdminUsers = () => {
     const password = formData.get('password') as string;
     const name = formData.get('name') as string;
     const phone = formData.get('phone') as string;
-    const role = formData.get('role') as string;
+    const role = formData.get('role') as 'user' | 'staff' | 'admin';
 
     if (!email || !password || !name) {
       toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
@@ -105,7 +104,7 @@ const AdminUsers = () => {
             id: authData.user.id,
             name,
             phone,
-            role
+            role: role as 'user' | 'staff' | 'admin'
           });
 
         if (profileError) {
