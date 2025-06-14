@@ -3,7 +3,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { PlusCircle, Edit, Trash2, ShieldCheck } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ShieldCheck, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -46,6 +45,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+import { useAdminRoles, useCreateRole, useUpdateRole, useDeleteRole } from "@/hooks/useAdminRoles";
 
 // Define role schema
 const roleFormSchema = z.object({
@@ -90,37 +92,26 @@ const defaultPermissions = [
   { id: "settings_edit", name: "Chỉnh sửa cài đặt", group: "Cài đặt" },
 ];
 
-// Example roles
-const initialRoles = [
-  {
-    id: "1",
-    name: "Admin",
-    description: "Quản trị viên hệ thống có toàn quyền truy cập",
-    permissions: defaultPermissions.map(p => p.id),
-  },
-  {
-    id: "2",
-    name: "Nhân viên",
-    description: "Nhân viên có quyền hạn chế",
-    permissions: ["users_view", "services_view", "bookings_view", "bookings_create", "bookings_edit", "staff_view"],
-  },
-  {
-    id: "3",
-    name: "Kế toán",
-    description: "Nhân viên kế toán có quyền quản lý giao dịch",
-    permissions: ["transactions_view", "transactions_create", "reports_view"],
-  },
-];
-
-type Role = typeof initialRoles[0];
+type Role = {
+  id: string;
+  name: string;
+  description: string;
+  userCount: number;
+  permissions: string[];
+  createdAt: string;
+};
 
 const Roles = () => {
-  const [roles, setRoles] = useState<Role[]>(initialRoles);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentRole, setCurrentRole] = useState<Role | null>(null);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+
+  const { data: roles = [], isLoading, error } = useAdminRoles();
+  const createRole = useCreateRole();
+  const updateRole = useUpdateRole();
+  const deleteRole = useDeleteRole();
 
   // Group permissions by category
   const groupedPermissions = defaultPermissions.reduce<Record<string, typeof defaultPermissions>>(
@@ -154,44 +145,44 @@ const Roles = () => {
   });
 
   const handleAddRole = (values: z.infer<typeof roleFormSchema>) => {
-    const newRole: Role = {
-      id: Date.now().toString(),
+    createRole.mutate({
       name: values.name,
       description: values.description || "",
       permissions: selectedPermissions,
-    };
-
-    setRoles([...roles, newRole]);
-    toast.success("Vai trò mới đã được thêm thành công!");
-    setIsAddDialogOpen(false);
-    addForm.reset();
-    setSelectedPermissions([]);
+    }, {
+      onSuccess: () => {
+        setIsAddDialogOpen(false);
+        addForm.reset();
+        setSelectedPermissions([]);
+      }
+    });
   };
 
   const handleEditRole = (values: z.infer<typeof roleFormSchema>) => {
     if (currentRole) {
-      const updatedRoles = roles.map(role =>
-        role.id === currentRole.id ? {
-          ...role,
-          name: values.name,
-          description: values.description || "",
-          permissions: selectedPermissions,
-        } : role
-      );
-
-      setRoles(updatedRoles);
-      toast.success("Cập nhật vai trò thành công!");
-      setIsEditDialogOpen(false);
-      setCurrentRole(null);
+      updateRole.mutate({
+        id: currentRole.id,
+        name: values.name,
+        description: values.description || "",
+        permissions: selectedPermissions,
+      }, {
+        onSuccess: () => {
+          setIsEditDialogOpen(false);
+          setCurrentRole(null);
+          setSelectedPermissions([]);
+        }
+      });
     }
   };
 
   const handleDeleteRole = () => {
     if (currentRole) {
-      setRoles(roles.filter(role => role.id !== currentRole.id));
-      toast.success("Vai trò đã được xóa thành công!");
-      setIsDeleteDialogOpen(false);
-      setCurrentRole(null);
+      deleteRole.mutate(currentRole.id, {
+        onSuccess: () => {
+          setIsDeleteDialogOpen(false);
+          setCurrentRole(null);
+        }
+      });
     }
   };
 
@@ -247,6 +238,35 @@ const Roles = () => {
            !groupPermissionIds.every(id => selectedPermissions.includes(id));
   };
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Phân quyền người dùng</h1>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Đang tải dữ liệu...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Phân quyền người dùng</h1>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <p className="text-red-500">Có lỗi xảy ra khi tải dữ liệu</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -259,6 +279,14 @@ const Roles = () => {
         </Button>
       </div>
 
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          <strong>Lưu ý:</strong> Hiện tại hệ thống đang sử dụng vai trò cơ bản từ bảng user_profiles. 
+          Để có chức năng phân quyền đầy đủ, cần tạo bảng roles và permissions riêng trong database.
+        </AlertDescription>
+      </Alert>
+
       <Card>
         <CardHeader>
           <CardTitle>Danh sách vai trò</CardTitle>
@@ -269,6 +297,7 @@ const Roles = () => {
               <TableRow>
                 <TableHead>Tên vai trò</TableHead>
                 <TableHead>Mô tả</TableHead>
+                <TableHead>Số người dùng</TableHead>
                 <TableHead>Số quyền hạn</TableHead>
                 <TableHead className="text-right">Thao tác</TableHead>
               </TableRow>
@@ -278,6 +307,7 @@ const Roles = () => {
                 <TableRow key={role.id}>
                   <TableCell className="font-medium">{role.name}</TableCell>
                   <TableCell>{role.description}</TableCell>
+                  <TableCell>{role.userCount}</TableCell>
                   <TableCell>{role.permissions.length}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-2">
@@ -286,13 +316,14 @@ const Roles = () => {
                         size="sm"
                         onClick={() => openEditDialog(role)}
                       >
-                        <Edit className="h-4 w-4 mr-1" /> Sửa
+                        <Edit className="h-4 w-4 mr-1" /> Xem
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         className="text-destructive"
                         onClick={() => openDeleteDialog(role)}
+                        disabled={role.id === "1" || role.id === "2" || role.id === "3"}
                       >
                         <Trash2 className="h-4 w-4 mr-1" /> Xóa
                       </Button>
@@ -383,7 +414,9 @@ const Roles = () => {
               </div>
 
               <DialogFooter>
-                <Button type="submit">Tạo vai trò</Button>
+                <Button type="submit" disabled={createRole.isPending}>
+                  {createRole.isPending ? "Đang tạo..." : "Tạo vai trò"}
+                </Button>
               </DialogFooter>
             </form>
           </Form>
@@ -394,84 +427,46 @@ const Roles = () => {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Chỉnh sửa vai trò</DialogTitle>
+            <DialogTitle>Xem vai trò</DialogTitle>
             <DialogDescription>
-              Cập nhật thông tin và phân quyền cho vai trò hiện tại.
+              Xem thông tin và phân quyền của vai trò hiện tại.
             </DialogDescription>
           </DialogHeader>
-          <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(handleEditRole)} className="space-y-6">
-              <FormField
-                control={editForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tên vai trò</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nhập tên vai trò" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Mô tả</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Mô tả vai trò này" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label>Tên vai trò</Label>
+              <Input value={currentRole?.name || ""} readOnly />
+            </div>
+            <div className="space-y-2">
+              <Label>Mô tả</Label>
+              <Input value={currentRole?.description || ""} readOnly />
+            </div>
 
-              <div>
-                <Label>Phân quyền</Label>
-                <div className="mt-2 border rounded-md p-4 max-h-[300px] overflow-y-auto">
-                  {Object.entries(groupedPermissions).map(([group, permissions]) => (
-                    <div key={group} className="mb-4">
-                      <div className="flex items-center mb-2">
-                        <Checkbox 
-                          id={`edit-group-${group}`}
-                          checked={isGroupFullySelected(group)}
-                          className="mr-2 data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground"
-                          data-state={isGroupPartiallySelected(group) ? "indeterminate" : undefined}
-                          onCheckedChange={(checked) => 
-                            handleSelectAllInGroup(group, checked === true)
-                          }
-                        />
-                        <Label htmlFor={`edit-group-${group}`} className="font-bold">
-                          {group}
-                        </Label>
-                      </div>
-                      <div className="pl-6 grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {permissions.map((permission) => (
-                          <div key={permission.id} className="flex items-center">
-                            <Checkbox 
-                              id={`edit-${permission.id}`}
-                              checked={selectedPermissions.includes(permission.id)}
-                              onCheckedChange={(checked) => 
-                                handlePermissionChange(permission.id, checked === true)
-                              }
-                              className="mr-2"
-                            />
-                            <Label htmlFor={`edit-${permission.id}`}>{permission.name}</Label>
-                          </div>
-                        ))}
-                      </div>
+            <div>
+              <Label>Phân quyền</Label>
+              <div className="mt-2 border rounded-md p-4 max-h-[300px] overflow-y-auto">
+                {Object.entries(groupedPermissions).map(([group, permissions]) => (
+                  <div key={group} className="mb-4">
+                    <div className="flex items-center mb-2">
+                      <Label className="font-bold">{group}</Label>
                     </div>
-                  ))}
-                </div>
+                    <div className="pl-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {permissions.map((permission) => (
+                        <div key={permission.id} className="flex items-center">
+                          <Checkbox 
+                            checked={currentRole?.permissions.includes(permission.id)}
+                            disabled
+                            className="mr-2"
+                          />
+                          <Label>{permission.name}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-
-              <DialogFooter>
-                <Button type="submit">Lưu thay đổi</Button>
-              </DialogFooter>
-            </form>
-          </Form>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -486,8 +481,12 @@ const Roles = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteRole} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Xóa
+            <AlertDialogAction 
+              onClick={handleDeleteRole} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteRole.isPending}
+            >
+              {deleteRole.isPending ? "Đang xóa..." : "Xóa"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

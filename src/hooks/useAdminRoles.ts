@@ -1,14 +1,12 @@
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const useAdminRoles = () => {
   return useQuery({
     queryKey: ["admin-roles"],
     queryFn: async () => {
-      // For now, we'll return static roles since there's no roles table in the database yet
-      // This can be updated when a proper roles/permissions system is implemented
-      
       // Get user counts for each role from user_profiles
       const { data: userProfiles } = await supabase
         .from('user_profiles')
@@ -60,5 +58,60 @@ export const useAdminRoles = () => {
         },
       ];
     }
+  });
+};
+
+export const useCreateRole = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (roleData: { name: string; description: string; permissions: string[] }) => {
+      // For now, we'll just show a toast since there's no roles table in the database
+      // This would need a proper roles table to be implemented
+      throw new Error("Chức năng tạo vai trò mới sẽ được triển khai khi có bảng roles trong database");
+    },
+    onSuccess: () => {
+      toast.success("Tạo vai trò thành công!");
+      queryClient.invalidateQueries({ queryKey: ["admin-roles"] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Có lỗi xảy ra khi tạo vai trò");
+    },
+  });
+};
+
+export const useUpdateRole = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...roleData }: { id: string; name: string; description: string; permissions: string[] }) => {
+      // For now, we'll just show a toast since there's no roles table in the database
+      throw new Error("Chức năng cập nhật vai trò sẽ được triển khai khi có bảng roles trong database");
+    },
+    onSuccess: () => {
+      toast.success("Cập nhật vai trò thành công!");
+      queryClient.invalidateQueries({ queryKey: ["admin-roles"] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Có lỗi xảy ra khi cập nhật vai trò");
+    },
+  });
+};
+
+export const useDeleteRole = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // For now, we'll just show a toast since there's no roles table in the database
+      throw new Error("Chức năng xóa vai trò sẽ được triển khai khi có bảng roles trong database");
+    },
+    onSuccess: () => {
+      toast.success("Xóa vai trò thành công!");
+      queryClient.invalidateQueries({ queryKey: ["admin-roles"] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Có lỗi xảy ra khi xóa vai trò");
+    },
   });
 };

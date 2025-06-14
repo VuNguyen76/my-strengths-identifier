@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -47,6 +48,7 @@ const AdminUsers = () => {
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   const queryClient = useQueryClient();
   const { data: users = [], isLoading, error } = useUsers(searchQuery);
@@ -59,26 +61,69 @@ const AdminUsers = () => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
     
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    const name = formData.get('name') as string;
+    const phone = formData.get('phone') as string;
+    const role = formData.get('role') as string;
+
+    if (!email || !password || !name) {
+      toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
+      return;
+    }
+
+    setIsCreatingUser(true);
+    
     try {
-      const { error } = await supabase.auth.signUp({
-        email: formData.get('email') as string,
-        password: formData.get('password') as string,
+      // Create user through Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
         options: {
           data: {
-            name: formData.get('name') as string,
-            phone: formData.get('phone') as string,
-            role: formData.get('role') as string
+            name,
+            phone,
+            role
           }
         }
       });
 
-      if (error) throw error;
+      if (authError) {
+        if (authError.message.includes('User already registered')) {
+          toast.error("Email này đã được đăng ký");
+        } else {
+          toast.error("Có lỗi xảy ra: " + authError.message);
+        }
+        return;
+      }
 
-      toast.success("Người dùng mới đã được thêm thành công");
+      if (authData.user) {
+        // Update the user profile with additional info
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .upsert({
+            id: authData.user.id,
+            name,
+            phone,
+            role
+          });
+
+        if (profileError) {
+          console.error("Profile error:", profileError);
+          toast.error("Tạo user thành công nhưng có lỗi khi cập nhật thông tin profile");
+        } else {
+          toast.success("Người dùng mới đã được thêm thành công");
+        }
+      }
+
       setIsAddUserDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      (e.target as HTMLFormElement).reset();
     } catch (error: any) {
+      console.error("Add user error:", error);
       toast.error("Có lỗi xảy ra: " + error.message);
+    } finally {
+      setIsCreatingUser(false);
     }
   };
 
@@ -88,6 +133,10 @@ const AdminUsers = () => {
   };
 
   const handleDeleteUser = async (userId: string) => {
+    if (!confirm("Bạn có chắc chắn muốn xóa người dùng này?")) {
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('user_profiles')
@@ -196,11 +245,11 @@ const AdminUsers = () => {
             <form onSubmit={handleAddUser} className="space-y-4">
               <div className="grid gap-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Tên đầy đủ</Label>
+                  <Label htmlFor="name">Tên đầy đủ *</Label>
                   <Input id="name" name="name" placeholder="Nguyễn Văn A" required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Email *</Label>
                   <Input id="email" name="email" type="email" placeholder="example@email.com" required />
                 </div>
                 <div className="space-y-2">
@@ -208,8 +257,8 @@ const AdminUsers = () => {
                   <Input id="phone" name="phone" placeholder="0901234567" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Mật khẩu</Label>
-                  <Input id="password" name="password" type="password" required />
+                  <Label htmlFor="password">Mật khẩu *</Label>
+                  <Input id="password" name="password" type="password" placeholder="Tối thiểu 6 ký tự" required minLength={6} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="role">Vai trò</Label>
@@ -226,7 +275,9 @@ const AdminUsers = () => {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit">Tạo người dùng</Button>
+                <Button type="submit" disabled={isCreatingUser}>
+                  {isCreatingUser ? "Đang tạo..." : "Tạo người dùng"}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
