@@ -10,7 +10,7 @@ interface BlogDetailHeaderProps {
 const BlogDetailHeader = ({ post }: BlogDetailHeaderProps) => {
   const calculateReadTime = (content: string | null): number => {
     if (!content) return 5;
-    const wordsPerMinute = 200; // Average reading speed
+    const wordsPerMinute = 200;
     const wordCount = content.replace(/<[^>]*>/g, '').split(/\s+/).length;
     return Math.ceil(wordCount / wordsPerMinute) || 5;
   };
@@ -24,31 +24,42 @@ const BlogDetailHeader = ({ post }: BlogDetailHeaderProps) => {
   };
 
   return (
-    <div className="mb-6">
-      <div className="mb-4">
-        <Badge className="mb-4" variant="secondary">
+    <div className="px-8 pt-8 pb-6">
+      <div className="max-w-3xl mx-auto">
+        <Badge className="mb-6 bg-gradient-to-r from-primary to-pink-600 text-white border-0" variant="secondary">
           {post.blog_categories?.name || "Chưa phân loại"}
         </Badge>
-        <h1 className="text-3xl md:text-4xl font-bold mb-4 leading-tight">{post.title}</h1>
+        
+        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+          {post.title}
+        </h1>
         
         {post.description && (
-          <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
+          <p className="text-xl text-muted-foreground mb-8 leading-relaxed font-light">
             {post.description}
           </p>
         )}
         
-        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground bg-gray-50 p-4 rounded-lg">
-          <div className="flex items-center">
-            <Calendar className="h-4 w-4 mr-2" />
-            <span>{formatDate(post.created_at)}</span>
+        <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground bg-gradient-to-r from-gray-50 to-gray-100 p-6 rounded-xl border">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-primary/10 rounded-full">
+              <Calendar className="h-4 w-4 text-primary" />
+            </div>
+            <span className="font-medium">{formatDate(post.created_at)}</span>
           </div>
-          <div className="flex items-center">
-            <Clock className="h-4 w-4 mr-2" />
-            <span>{calculateReadTime(post.content)} phút đọc</span>
+          
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-primary/10 rounded-full">
+              <Clock className="h-4 w-4 text-primary" />
+            </div>
+            <span className="font-medium">{calculateReadTime(post.content)} phút đọc</span>
           </div>
-          <div className="flex items-center">
-            <User className="h-4 w-4 mr-2" />
-            <span>{post.author}</span>
+          
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-primary/10 rounded-full">
+              <User className="h-4 w-4 text-primary" />
+            </div>
+            <span className="font-medium">{post.author}</span>
           </div>
         </div>
       </div>

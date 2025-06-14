@@ -5,17 +5,11 @@ import { Link } from "react-router-dom";
 
 const BlogHeader = () => {
   return (
-    <div className="max-w-2xl mx-auto text-center mb-12">
-      <div className="w-full mb-6">
-        <Button variant="ghost" asChild className="mb-4">
-          <Link to="/">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Về trang chủ
-          </Link>
-        </Button>
-      </div>
-      <h1 className="text-4xl font-bold mb-4">Blog làm đẹp & Chăm sóc da</h1>
-      <p className="text-gray-600">
+    <div className="max-w-4xl mx-auto text-center mb-12">
+      <h1 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-primary to-pink-600 bg-clip-text text-transparent">
+        Blog làm đẹp & Chăm sóc da
+      </h1>
+      <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
         Khám phá những bài viết chuyên sâu về chăm sóc da, bí quyết làm đẹp và cách điều trị các vấn đề về da từ các chuyên gia hàng đầu.
       </p>
     </div>

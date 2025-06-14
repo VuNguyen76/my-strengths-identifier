@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Share2, Bookmark, ArrowLeft, Home } from "lucide-react";
+import { Share2, Bookmark, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface BlogDetailActionsProps {
@@ -13,14 +13,12 @@ const BlogDetailActions = ({ onShare, onBookmark }: BlogDetailActionsProps) => {
     if (onShare) {
       onShare();
     } else {
-      // Default share functionality
       if (navigator.share) {
         navigator.share({
           title: document.title,
           url: window.location.href,
         });
       } else {
-        // Fallback: copy to clipboard
         navigator.clipboard.writeText(window.location.href);
       }
     }
@@ -30,33 +28,25 @@ const BlogDetailActions = ({ onShare, onBookmark }: BlogDetailActionsProps) => {
     if (onBookmark) {
       onBookmark();
     } else {
-      // Default bookmark functionality - could integrate with user preferences later
       console.log("Bookmark functionality to be implemented");
     }
   };
 
   return (
-    <div className="flex justify-between items-center mb-8 p-4 bg-gray-50 rounded-lg">
-      <div className="flex space-x-2">
-        <Button variant="outline" asChild>
-          <Link to="/blog">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Quay lại Blog
-          </Link>
-        </Button>
-        <Button variant="outline" asChild>
-          <Link to="/">
-            <Home className="h-4 w-4 mr-2" />
-            Trang chủ
-          </Link>
-        </Button>
-      </div>
-      <div className="flex space-x-2">
-        <Button variant="outline" size="sm" onClick={handleShare}>
+    <div className="flex justify-between items-center mb-8">
+      <Button variant="ghost" asChild className="text-muted-foreground hover:text-foreground">
+        <Link to="/blog">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Quay lại Blog
+        </Link>
+      </Button>
+      
+      <div className="flex space-x-3">
+        <Button variant="outline" size="sm" onClick={handleShare} className="hover:bg-primary/10">
           <Share2 className="h-4 w-4 mr-2" />
           Chia sẻ
         </Button>
-        <Button variant="outline" size="sm" onClick={handleBookmark}>
+        <Button variant="outline" size="sm" onClick={handleBookmark} className="hover:bg-primary/10">
           <Bookmark className="h-4 w-4 mr-2" />
           Lưu
         </Button>
