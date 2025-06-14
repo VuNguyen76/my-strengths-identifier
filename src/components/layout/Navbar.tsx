@@ -12,41 +12,77 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { supabase } from "@/integrations/supabase/client";
+import { User as SupabaseUser } from "@supabase/supabase-js";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Check if user is logged in
-    const loggedIn = localStorage.getItem("isLoggedIn") === "true";
-    setIsLoggedIn(loggedIn);
-    
-    if (loggedIn) {
-      try {
-        const userData = JSON.parse(localStorage.getItem("user") || "{}");
-        setUser(userData);
-      } catch (error) {
-        console.error("Failed to parse user data", error);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
       }
-    }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setUserProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching user profile:', error);
+        return;
+      }
+
+      setUserProfile(data);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
   
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
   
-  const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("user");
-    setIsLoggedIn(false);
-    setUser(null);
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Error signing out:', error);
+        return;
+      }
+      setUser(null);
+      setUserProfile(null);
+      navigate("/");
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
   };
 
-  const isAdmin = user?.role === "admin" || user?.role === "staff";
+  const isAdmin = userProfile?.role === "admin" || userProfile?.role === "staff";
+  const displayName = userProfile?.name || user?.user_metadata?.name || user?.email;
 
   return (
     <nav className="fixed top-0 w-full bg-background/90 backdrop-blur-md z-50 shadow-sm">
@@ -86,12 +122,12 @@ const Navbar = () => {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            {isLoggedIn ? (
+            {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2">
                     {isAdmin ? <Shield size={16} className="text-primary" /> : <User size={16} />}
-                    <span className="hidden sm:inline">{user?.email}</span>
+                    <span className="hidden sm:inline">{displayName}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -103,7 +139,7 @@ const Navbar = () => {
                   <DropdownMenuItem asChild>
                     <Link to="/dashboard/profile">Thông tin cá nhân</Link>
                   </DropdownMenuItem>
-                  {user?.role === "admin" && (
+                  {userProfile?.role === "admin" && (
                     <DropdownMenuItem asChild>
                       <Link to="/admin">Quản trị viên</Link>
                     </DropdownMenuItem>
@@ -151,7 +187,7 @@ const Navbar = () => {
                 Trắc nghiệm da
               </Link>
               
-              {isLoggedIn && (
+              {user && (
                 <>
                   <Link to="/dashboard" className="hover:text-primary transition-colors px-2 py-1.5 rounded font-medium">
                     Tổng quan
@@ -164,7 +200,7 @@ const Navbar = () => {
             </div>
             
             <div className="pt-2 flex gap-2">
-              {isLoggedIn ? (
+              {user ? (
                 <Button variant="outline" className="flex-1" onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   Đăng xuất

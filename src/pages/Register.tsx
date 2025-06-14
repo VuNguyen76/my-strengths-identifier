@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Facebook, Mail } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { supabase } from "@/integrations/supabase/client";
 
 const registerSchema = z.object({
   name: z.string().min(2, "Tên phải có ít nhất 2 ký tự"),
@@ -33,45 +34,9 @@ const registerSchema = z.object({
 
 type RegisterValues = z.infer<typeof registerSchema>;
 
-// Facebook SDK initialization - same as in Login page
-const initFacebookSDK = () => {
-  if (window.FB) return Promise.resolve();
-  
-  return new Promise<void>((resolve) => {
-    window.fbAsyncInit = function() {
-      window.FB.init({
-        appId: '1234567890', // Replace with your Facebook App ID
-        cookie: true,
-        xfbml: true,
-        version: 'v18.0'
-      });
-      resolve();
-    };
-
-    (function(d, s, id) {
-      const fjs = d.getElementsByTagName(s)[0];
-      if (d.getElementById(id)) return;
-      const js = d.createElement(s) as HTMLScriptElement;
-      js.id = id;
-      js.src = "https://connect.facebook.net/en_US/sdk.js";
-      fjs.parentNode?.insertBefore(js, fjs);
-    }(document, 'script', 'facebook-jssdk'));
-  });
-};
-
 const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [facebookSDKLoaded, setFacebookSDKLoaded] = useState(false);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    // Initialize Facebook SDK
-    initFacebookSDK().then(() => {
-      setFacebookSDKLoaded(true);
-    }).catch(error => {
-      console.error("Error initializing Facebook SDK:", error);
-    });
-  }, []);
 
   const form = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
@@ -83,61 +48,75 @@ const Register = () => {
     },
   });
 
-  const onSubmit = (values: RegisterValues) => {
+  const onSubmit = async (values: RegisterValues) => {
     setIsLoading(true);
 
-    // Mock registration - In a real app, replace with actual API call
-    setTimeout(() => {
-      console.log("Registration submitted:", values);
-      setIsLoading(false);
-      toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
-      navigate("/login");
-    }, 1000);
-  };
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: {
+            name: values.name,
+          },
+          emailRedirectTo: `${window.location.origin}/`
+        }
+      });
 
-  const handleFacebookLogin = () => {
-    setIsLoading(true);
-    
-    if (!window.FB) {
-      toast.error("Facebook SDK chưa được tải");
-      setIsLoading(false);
-      return;
-    }
-    
-    window.FB.login((response) => {
-      if (response.authResponse) {
-        // Get user information from Facebook
-        window.FB.api('/me', { fields: 'name,email' }, (userInfo) => {
-          console.log('Facebook register successful', userInfo);
-          toast.success("Đăng ký Facebook thành công!");
-          localStorage.setItem("isLoggedIn", "true");
-          localStorage.setItem("user", JSON.stringify({ 
-            email: userInfo.email || `${userInfo.id}@facebook.com`,
-            name: userInfo.name,
-            provider: "facebook",
-            facebookId: userInfo.id,
-            role: "user"
-          }));
-          setIsLoading(false);
-          navigate("/");
-        });
-      } else {
-        console.log('Facebook registration cancelled');
-        toast.error("Đăng ký Facebook bị hủy");
-        setIsLoading(false);
+      if (error) {
+        toast.error(error.message);
+        return;
       }
-    }, { scope: 'public_profile,email' });
+
+      toast.success("Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản.");
+      navigate("/login");
+    } catch (error) {
+      toast.error("Đã xảy ra lỗi không mong muốn");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleGmailLogin = () => {
+  const handleFacebookRegister = async () => {
     setIsLoading(true);
     
-    // Mock Gmail login - In a real app, replace with Google OAuth
-    setTimeout(() => {
-      console.log(`Register with Gmail`);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: {
+          redirectTo: `${window.location.origin}/`
+        }
+      });
+
+      if (error) {
+        toast.error("Lỗi đăng ký Facebook: " + error.message);
+      }
+    } catch (error) {
+      toast.error("Không thể kết nối với Facebook");
+    } finally {
       setIsLoading(false);
-      toast.error("Đăng ký Gmail chưa được tích hợp");
-    }, 1000);
+    }
+  };
+
+  const handleGoogleRegister = async () => {
+    setIsLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`
+        }
+      });
+
+      if (error) {
+        toast.error("Lỗi đăng ký Google: " + error.message);
+      }
+    } catch (error) {
+      toast.error("Không thể kết nối với Google");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -154,8 +133,8 @@ const Register = () => {
               <Button 
                 variant="outline" 
                 className="w-full" 
-                onClick={handleFacebookLogin}
-                disabled={isLoading || !facebookSDKLoaded}
+                onClick={handleFacebookRegister}
+                disabled={isLoading}
               >
                 <Facebook className="mr-2 h-4 w-4" />
                 Facebook
@@ -163,11 +142,11 @@ const Register = () => {
               <Button 
                 variant="outline" 
                 className="w-full" 
-                onClick={handleGmailLogin}
+                onClick={handleGoogleRegister}
                 disabled={isLoading}
               >
                 <Mail className="mr-2 h-4 w-4" />
-                Gmail
+                Google
               </Button>
             </div>
 
@@ -265,13 +244,5 @@ const Register = () => {
     </div>
   );
 };
-
-// Add types for Facebook SDK
-declare global {
-  interface Window {
-    FB: any;
-    fbAsyncInit: () => void;
-  }
-}
 
 export default Register;
