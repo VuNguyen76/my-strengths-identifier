@@ -1,13 +1,12 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useServices } from "@/hooks/useServices";
 
 const Services = () => {
-  const { data: services = [], isLoading } = useServices();
+  const { services, loading } = useServices();
 
-  if (isLoading) {
+  if (loading) {
     return (
       <section className="py-20">
         <div className="container mx-auto px-4">
