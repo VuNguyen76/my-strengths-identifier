@@ -3,25 +3,37 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+// Define the user type from Supabase Auth
+type AuthUser = {
+  id: string;
+  email?: string;
+  user_metadata?: {
+    role?: string;
+    name?: string;
+    phone?: string;
+  };
+  created_at: string;
+};
+
 export const useAdminRoles = () => {
   return useQuery({
     queryKey: ["admin-roles"],
     queryFn: async () => {
       // Get users from auth to count roles
-      const { data: users } = await supabase.auth.admin.listUsers();
+      const { data: authData } = await supabase.auth.admin.listUsers();
 
-      const roleCounts = users?.users?.reduce((acc: Record<string, number>, user) => {
+      const roleCounts: Record<string, number> = (authData?.users as AuthUser[] || []).reduce((acc: Record<string, number>, user: AuthUser) => {
         const role = user.user_metadata?.role || 'user';
         acc[role] = (acc[role] || 0) + 1;
         return acc;
-      }, {}) || {};
+      }, {});
 
       return [
         {
           id: "1",
           name: "Admin",
           description: "Quản trị viên hệ thống có toàn quyền truy cập",
-          userCount: roleCounts.admin || 0,
+          userCount: roleCounts['admin'] || 0,
           permissions: [
             "users_view", "users_create", "users_edit", "users_delete",
             "services_view", "services_create", "services_edit", "services_delete",
@@ -37,7 +49,7 @@ export const useAdminRoles = () => {
           id: "2", 
           name: "Staff",
           description: "Nhân viên có quyền hạn chế",
-          userCount: roleCounts.staff || 0,
+          userCount: roleCounts['staff'] || 0,
           permissions: [
             "users_view", "services_view", "bookings_view", 
             "bookings_create", "bookings_edit", "staff_view"
@@ -48,7 +60,7 @@ export const useAdminRoles = () => {
           id: "3",
           name: "User", 
           description: "Người dùng thông thường",
-          userCount: roleCounts.user || 0,
+          userCount: roleCounts['user'] || 0,
           permissions: [
             "bookings_view", "bookings_create"
           ],
