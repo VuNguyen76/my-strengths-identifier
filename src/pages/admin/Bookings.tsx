@@ -31,85 +31,15 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { format, addHours, startOfToday } from "date-fns";
+import { format, startOfToday } from "date-fns";
 import { Search, Plus, Calendar as CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
-
-// Sample data for bookings
-const bookingData = [
-  {
-    id: "1",
-    customer: "Nguyễn Văn A",
-    email: "nguyenvana@example.com",
-    phone: "0901234567",
-    service: "Chăm sóc da cơ bản",
-    specialist: "Lê Thị B",
-    date: "2023-09-15T09:00:00",
-    status: "completed",
-  },
-  {
-    id: "2",
-    customer: "Trần Thị C",
-    email: "tranthic@example.com",
-    phone: "0913456789",
-    service: "Trị mụn chuyên sâu",
-    specialist: "Phạm Văn D",
-    date: "2023-09-16T15:30:00",
-    status: "cancelled",
-  },
-  {
-    id: "3",
-    customer: "Lê Văn E",
-    email: "levane@example.com",
-    phone: "0987654321",
-    service: "Massage mặt",
-    specialist: "Nguyễn Thị F",
-    date: "2023-09-17T11:00:00",
-    status: "pending",
-  },
-  {
-    id: "4",
-    customer: "Hoàng Thị G",
-    email: "hoangthig@example.com",
-    phone: "0932345678",
-    service: "Trẻ hóa da",
-    specialist: "Vũ Văn H",
-    date: "2023-09-20T14:00:00",
-    status: "confirmed",
-  },
-  {
-    id: "5",
-    customer: "Ngô Văn I",
-    email: "ngovani@example.com",
-    phone: "0945678912",
-    service: "Tẩy trang chuyên sâu",
-    specialist: "Lý Thị K",
-    date: "2023-09-22T10:30:00",
-    status: "pending",
-  }
-];
-
-// Sample data for services
-const services = [
-  "Chăm sóc da cơ bản",
-  "Trị mụn chuyên sâu", 
-  "Massage mặt",
-  "Trẻ hóa da",
-  "Tẩy trang chuyên sâu",
-  "Dịch vụ triệt lông",
-  "Tắm trắng toàn thân",
-  "Điều trị nám, tàn nhang"
-];
-
-// Sample data for specialists
-const specialists = [
-  "Lê Thị B",
-  "Phạm Văn D",
-  "Nguyễn Thị F",
-  "Vũ Văn H",
-  "Lý Thị K"
-];
+import { useAdminBookings } from "@/hooks/useAdminBookings";
+import { useAdminServices } from "@/hooks/useAdminServices";
+import { useAdminSpecialists } from "@/hooks/useAdminSpecialists";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 const AdminBookings = () => {
   const [activeTab, setActiveTab] = useState("all");
@@ -129,15 +59,16 @@ const AdminBookings = () => {
     notes: ""
   });
   
-  // State to manage bookings
-  const [bookings, setBookings] = useState(bookingData);
-  
   // Date for calendar
   const [date, setDate] = useState<Date | undefined>(startOfToday());
 
+  const queryClient = useQueryClient();
+  const { data: bookings = [], isLoading, error } = useAdminBookings(searchTerm);
+  const { data: services = [] } = useAdminServices();
+  const { data: specialists = [] } = useAdminSpecialists();
+
   const handleDateSelect = (selectedDate: Date | undefined) => {
     setDate(selectedDate);
-    // Update new booking with selected date
     if (selectedDate) {
       setNewBooking(prev => ({ ...prev, date: selectedDate }));
     }
@@ -152,43 +83,67 @@ const AdminBookings = () => {
     setNewBooking(prev => ({ ...prev, [name]: value }));
   };
 
-  const createBooking = () => {
-    // Combine date and time
-    const bookingDateTime = new Date(newBooking.date);
-    const [hours, minutes] = newBooking.time.split(":").map(Number);
-    bookingDateTime.setHours(hours, minutes);
-    
-    const formattedDateTime = bookingDateTime.toISOString();
-    
-    // Create new booking object
-    const bookingEntry = {
-      id: (bookings.length + 1).toString(),
-      customer: newBooking.customer,
-      email: newBooking.email,
-      phone: newBooking.phone,
-      service: newBooking.service,
-      specialist: newBooking.specialist,
-      date: formattedDateTime,
-      status: "pending" as const, // Type assertion
-    };
-    
-    // Add to bookings
-    setBookings([...bookings, bookingEntry]);
-    
-    // Reset form and close dialog
-    setNewBooking({
-      customer: "",
-      email: "",
-      phone: "",
-      service: "",
-      specialist: "",
-      date: startOfToday(),
-      time: "09:00",
-      notes: ""
-    });
-    
-    setIsDialogOpen(false);
-    toast.success("Đặt lịch mới đã được tạo!");
+  const createBooking = async () => {
+    try {
+      // Combine date and time
+      const bookingDateTime = new Date(newBooking.date);
+      const [hours, minutes] = newBooking.time.split(":").map(Number);
+      bookingDateTime.setHours(hours, minutes);
+      
+      // Find selected service and specialist
+      const selectedService = services.find(s => s.name === newBooking.service);
+      const selectedSpecialist = specialists.find(s => s.name === newBooking.specialist);
+
+      // Create booking
+      const { data: bookingData, error: bookingError } = await supabase
+        .from('bookings')
+        .insert([{
+          customer_name: newBooking.customer,
+          customer_email: newBooking.email,
+          customer_phone: newBooking.phone,
+          specialist_id: selectedSpecialist?.id || null,
+          booking_date: format(newBooking.date, 'yyyy-MM-dd'),
+          booking_time: newBooking.time,
+          status: 'pending',
+          total_price: selectedService?.price || 0,
+          notes: newBooking.notes
+        }])
+        .select()
+        .single();
+
+      if (bookingError) throw bookingError;
+
+      // Create booking service relationship
+      if (selectedService && bookingData) {
+        const { error: serviceError } = await supabase
+          .from('booking_services')
+          .insert([{
+            booking_id: bookingData.id,
+            service_id: selectedService.id,
+            price: selectedService.price
+          }]);
+
+        if (serviceError) throw serviceError;
+      }
+
+      // Reset form and close dialog
+      setNewBooking({
+        customer: "",
+        email: "",
+        phone: "",
+        service: "",
+        specialist: "",
+        date: startOfToday(),
+        time: "09:00",
+        notes: ""
+      });
+      
+      setIsDialogOpen(false);
+      toast.success("Đặt lịch mới đã được tạo!");
+      queryClient.invalidateQueries({ queryKey: ["admin-bookings"] });
+    } catch (error: any) {
+      toast.error("Có lỗi xảy ra: " + error.message);
+    }
   };
 
   const handleTabChange = (value: string) => {
@@ -203,10 +158,26 @@ const AdminBookings = () => {
         return <Badge className="bg-yellow-500">Chờ xác nhận</Badge>;
       case "completed":
         return <Badge className="bg-blue-500">Hoàn thành</Badge>;
-      case "cancelled":
+      case "canceled":
         return <Badge className="bg-red-500">Đã hủy</Badge>;
       default:
         return <Badge>Không xác định</Badge>;
+    }
+  };
+
+  const updateBookingStatus = async (bookingId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: newStatus })
+        .eq('id', bookingId);
+
+      if (error) throw error;
+
+      toast.success(`Đã cập nhật trạng thái thành công`);
+      queryClient.invalidateQueries({ queryKey: ["admin-bookings"] });
+    } catch (error: any) {
+      toast.error("Có lỗi xảy ra: " + error.message);
     }
   };
 
@@ -224,13 +195,42 @@ const AdminBookings = () => {
       (activeTab === "pending" && booking.status === "pending") ||
       (activeTab === "confirmed" && booking.status === "confirmed") ||
       (activeTab === "completed" && booking.status === "completed") ||
-      (activeTab === "cancelled" && booking.status === "cancelled");
+      (activeTab === "cancelled" && booking.status === "canceled");
 
     // Filter by cancelled switch
-    const matchesCancelled = showCancelled || booking.status !== "cancelled";
+    const matchesCancelled = showCancelled || booking.status !== "canceled";
 
     return matchesSearch && matchesTab && matchesCancelled;
   });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight">Quản lý lịch đặt</h1>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Đang tải dữ liệu...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight">Quản lý lịch đặt</h1>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <p className="text-red-500">Có lỗi xảy ra khi tải dữ liệu</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -293,8 +293,8 @@ const AdminBookings = () => {
                     </SelectTrigger>
                     <SelectContent>
                       {services.map((service) => (
-                        <SelectItem key={service} value={service}>
-                          {service}
+                        <SelectItem key={service.id} value={service.name}>
+                          {service.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -313,8 +313,8 @@ const AdminBookings = () => {
                     </SelectTrigger>
                     <SelectContent>
                       {specialists.map((specialist) => (
-                        <SelectItem key={specialist} value={specialist}>
-                          {specialist}
+                        <SelectItem key={specialist.id} value={specialist.name}>
+                          {specialist.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -450,29 +450,39 @@ const AdminBookings = () => {
                         <TableCell>{booking.service}</TableCell>
                         <TableCell>{booking.specialist}</TableCell>
                         <TableCell>
-                          {format(new Date(booking.date), "dd/MM/yyyy HH:mm")}
+                          {format(new Date(`${booking.date}T${booking.time}`), "dd/MM/yyyy HH:mm")}
                         </TableCell>
                         <TableCell>{getStatusBadge(booking.status)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end space-x-2">
                             {booking.status === "pending" && (
                               <>
-                                <Button size="sm" variant="outline">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => updateBookingStatus(booking.id, "confirmed")}
+                                >
                                   Xác nhận
                                 </Button>
-                                <Button size="sm" variant="outline" className="text-red-500">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-red-500"
+                                  onClick={() => updateBookingStatus(booking.id, "canceled")}
+                                >
                                   Hủy
                                 </Button>
                               </>
                             )}
                             {booking.status === "confirmed" && (
-                              <Button size="sm" variant="outline">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => updateBookingStatus(booking.id, "completed")}
+                              >
                                 Hoàn thành
                               </Button>
                             )}
-                            <Button size="sm" variant="ghost">
-                              Chi tiết
-                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>

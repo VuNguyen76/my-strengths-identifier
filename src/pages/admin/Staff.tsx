@@ -40,131 +40,98 @@ import {
   Star 
 } from "lucide-react";
 import { toast } from "sonner";
-
-// Dummy data for specialists
-const staffData = [
-  {
-    id: "1",
-    name: "Nguyễn Thị A",
-    specialty: "Chăm sóc da",
-    email: "nguyenthia@example.com",
-    phone: "0901234567",
-    experience: "5 năm",
-    rating: 4.8,
-    status: "active",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330"
-  },
-  {
-    id: "2",
-    name: "Trần Văn B",
-    specialty: "Trị mụn",
-    email: "tranvanb@example.com",
-    phone: "0912345678",
-    experience: "3 năm",
-    rating: 4.5,
-    status: "active",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d"
-  },
-  {
-    id: "3",
-    name: "Lê Thị C",
-    specialty: "Massage mặt",
-    email: "lethic@example.com",
-    phone: "0923456789",
-    experience: "7 năm",
-    rating: 4.9,
-    status: "active",
-    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2"
-  },
-  {
-    id: "4",
-    name: "Phạm Văn D",
-    specialty: "Trẻ hóa da",
-    email: "phamvand@example.com",
-    phone: "0934567890",
-    experience: "4 năm",
-    rating: 4.6,
-    status: "inactive",
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e"
-  },
-];
+import { useAdminSpecialists } from "@/hooks/useAdminSpecialists";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 const AdminStaff = () => {
-  const [staff, setStaff] = useState(staffData);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddStaffDialogOpen, setIsAddStaffDialogOpen] = useState(false);
   const [isEditStaffDialogOpen, setIsEditStaffDialogOpen] = useState(false);
-  const [selectedStaff, setSelectedStaff] = useState<(typeof staffData)[0] | null>(null);
+  const [selectedStaff, setSelectedStaff] = useState<any>(null);
+
+  const queryClient = useQueryClient();
+  const { data: staff = [], isLoading, error } = useAdminSpecialists(searchQuery);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
   };
 
-  const filteredStaff = staff.filter((member) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      member.name.toLowerCase().includes(query) ||
-      member.specialty.toLowerCase().includes(query) ||
-      member.email.toLowerCase().includes(query) ||
-      member.phone.includes(query)
-    );
-  });
-
-  const handleAddStaff = (e: React.FormEvent) => {
+  const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
     
-    const newStaff = {
-      id: Date.now().toString(),
-      name: formData.get("name") as string,
-      specialty: formData.get("specialty") as string,
-      email: formData.get("email") as string,
-      phone: formData.get("phone") as string,
-      experience: formData.get("experience") as string,
-      rating: 0,
-      status: "active",
-      image: formData.get("image") as string || "https://via.placeholder.com/150",
-    };
-    
-    setStaff([...staff, newStaff]);
-    toast.success("Đã thêm chuyên viên mới thành công");
-    setIsAddStaffDialogOpen(false);
-    form.reset();
-  };
+    try {
+      const { error } = await supabase
+        .from('specialists')
+        .insert([{
+          name: formData.get("name") as string,
+          role: formData.get("specialty") as string,
+          experience: formData.get("experience") as string,
+          bio: formData.get("bio") as string,
+          image_url: formData.get("image") as string || null,
+          is_active: true
+        }]);
 
-  const handleEditStaff = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedStaff) {
-      const form = e.target as HTMLFormElement;
-      const formData = new FormData(form);
-      
-      setStaff(staff.map(member => 
-        member.id === selectedStaff.id 
-          ? { 
-              ...member, 
-              name: formData.get("name") as string,
-              specialty: formData.get("specialty") as string,
-              email: formData.get("email") as string,
-              phone: formData.get("phone") as string,
-              experience: formData.get("experience") as string,
-              image: formData.get("image") as string || member.image,
-            } 
-          : member
-      ));
-      
-      toast.success(`Đã cập nhật thông tin chuyên viên ${selectedStaff.name} thành công`);
-      setIsEditStaffDialogOpen(false);
-      setSelectedStaff(null);
+      if (error) throw error;
+
+      toast.success("Đã thêm chuyên viên mới thành công");
+      setIsAddStaffDialogOpen(false);
+      form.reset();
+      queryClient.invalidateQueries({ queryKey: ["admin-specialists"] });
+    } catch (error: any) {
+      toast.error("Có lỗi xảy ra: " + error.message);
     }
   };
 
-  const handleDeleteStaff = (staffId: string) => {
-    setStaff(staff.filter(member => member.id !== staffId));
-    toast.success("Đã xóa chuyên viên thành công");
+  const handleEditStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedStaff) return;
+
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    try {
+      const { error } = await supabase
+        .from('specialists')
+        .update({
+          name: formData.get("name") as string,
+          role: formData.get("specialty") as string,
+          experience: formData.get("experience") as string,
+          bio: formData.get("bio") as string,
+          image_url: formData.get("image") as string || selectedStaff.image,
+        })
+        .eq('id', selectedStaff.id);
+
+      if (error) throw error;
+
+      toast.success(`Đã cập nhật thông tin chuyên viên ${selectedStaff.name} thành công`);
+      setIsEditStaffDialogOpen(false);
+      setSelectedStaff(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-specialists"] });
+    } catch (error: any) {
+      toast.error("Có lỗi xảy ra: " + error.message);
+    }
   };
 
-  const openEditDialog = (member: (typeof staffData)[0]) => {
+  const handleDeleteStaff = async (staffId: string) => {
+    try {
+      const { error } = await supabase
+        .from('specialists')
+        .delete()
+        .eq('id', staffId);
+
+      if (error) throw error;
+
+      toast.success("Đã xóa chuyên viên thành công");
+      queryClient.invalidateQueries({ queryKey: ["admin-specialists"] });
+    } catch (error: any) {
+      toast.error("Có lỗi xảy ra: " + error.message);
+    }
+  };
+
+  const openEditDialog = (member: any) => {
     setSelectedStaff(member);
     setIsEditStaffDialogOpen(true);
   };
@@ -174,6 +141,35 @@ const AdminStaff = () => {
       ? <Badge className="bg-green-500">Đang làm việc</Badge>
       : <Badge className="bg-gray-500">Nghỉ việc</Badge>;
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight">Quản lý chuyên viên</h1>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Đang tải dữ liệu...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight">Quản lý chuyên viên</h1>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <p className="text-red-500">Có lỗi xảy ra khi tải dữ liệu</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -203,16 +199,6 @@ const AdminStaff = () => {
                   <div className="space-y-2">
                     <Label htmlFor="specialty">Chuyên môn</Label>
                     <Input id="specialty" name="specialty" placeholder="Chăm sóc da" required />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" name="email" type="email" placeholder="example@email.com" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Số điện thoại</Label>
-                    <Input id="phone" name="phone" placeholder="0901234567" required />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -252,7 +238,7 @@ const AdminStaff = () => {
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Tìm kiếm theo tên, chuyên môn, email hoặc số điện thoại..."
+                placeholder="Tìm kiếm theo tên, chuyên môn..."
                 className="pl-8"
                 value={searchQuery}
                 onChange={handleSearch}
@@ -266,8 +252,6 @@ const AdminStaff = () => {
                 <TableRow>
                   <TableHead>Tên</TableHead>
                   <TableHead>Chuyên môn</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Số điện thoại</TableHead>
                   <TableHead>Kinh nghiệm</TableHead>
                   <TableHead>Đánh giá</TableHead>
                   <TableHead>Trạng thái</TableHead>
@@ -275,8 +259,8 @@ const AdminStaff = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredStaff.length > 0 ? (
-                  filteredStaff.map((member) => (
+                {staff.length > 0 ? (
+                  staff.map((member) => (
                     <TableRow key={member.id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center space-x-2">
@@ -292,8 +276,6 @@ const AdminStaff = () => {
                         </div>
                       </TableCell>
                       <TableCell>{member.specialty}</TableCell>
-                      <TableCell>{member.email}</TableCell>
-                      <TableCell>{member.phone}</TableCell>
                       <TableCell>{member.experience}</TableCell>
                       <TableCell>
                         <div className="flex items-center">
@@ -331,7 +313,7 @@ const AdminStaff = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                       Không tìm thấy chuyên viên nào
                     </TableCell>
                   </TableRow>
@@ -375,27 +357,6 @@ const AdminStaff = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="edit-email">Email</Label>
-                    <Input 
-                      id="edit-email" 
-                      name="email" 
-                      type="email" 
-                      defaultValue={selectedStaff.email} 
-                      required 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-phone">Số điện thoại</Label>
-                    <Input 
-                      id="edit-phone" 
-                      name="phone" 
-                      defaultValue={selectedStaff.phone} 
-                      required 
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
                     <Label htmlFor="edit-experience">Kinh nghiệm</Label>
                     <Input 
                       id="edit-experience" 
@@ -418,6 +379,7 @@ const AdminStaff = () => {
                   <Textarea 
                     id="edit-bio" 
                     name="bio" 
+                    defaultValue={selectedStaff.bio}
                     placeholder="Thông tin chi tiết về chuyên viên..." 
                     rows={3}
                   />
