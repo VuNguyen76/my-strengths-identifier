@@ -109,7 +109,7 @@ export const useDashboardStats = () => {
           date: `${booking.booking_date}T${booking.booking_time}`,
           status: booking.status === 'completed' ? 'Đã hoàn thành' :
                   booking.status === 'pending' ? 'Đang chờ' :
-                  booking.status === 'cancelled' ? 'Đã hủy' : 'Khác'
+                  booking.status === 'canceled' ? 'Đã hủy' : 'Khác'
         })) || [],
         popularServices
       };

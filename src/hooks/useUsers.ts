@@ -24,8 +24,8 @@ export const useUsers = (searchQuery?: string) => {
         name: user.name || 'Chưa có tên',
         email: 'email@example.com', // Email không lưu trong user_profiles
         phone: user.phone || 'Chưa có SĐT',
-        role: user.role,
-        status: 'active',
+        role: user.role as 'user' | 'staff' | 'admin',
+        status: 'active' as const,
         createdAt: user.created_at
       })) || [];
     }
