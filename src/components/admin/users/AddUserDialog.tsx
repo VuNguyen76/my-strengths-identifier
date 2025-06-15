@@ -16,6 +16,7 @@ import { UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import WaitingInterface from "@/components/ui/waiting-interface";
 
 interface AddUserDialogProps {
   isOpen: boolean;
@@ -24,6 +25,8 @@ interface AddUserDialogProps {
 
 const AddUserDialog = ({ isOpen, onOpenChange }: AddUserDialogProps) => {
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [showWaiting, setShowWaiting] = useState(false);
+  const [waitingStatus, setWaitingStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const queryClient = useQueryClient();
 
   const handleAddUser = async (e: React.FormEvent) => {
@@ -41,6 +44,8 @@ const AddUserDialog = ({ isOpen, onOpenChange }: AddUserDialogProps) => {
     }
 
     setIsCreatingUser(true);
+    setShowWaiting(true);
+    setWaitingStatus('loading');
     
     try {
       // Create user through Supabase Auth with metadata
@@ -63,6 +68,7 @@ const AddUserDialog = ({ isOpen, onOpenChange }: AddUserDialogProps) => {
         } else {
           toast.error("Có lỗi xảy ra: " + authError.message);
         }
+        setWaitingStatus('error');
         return;
       }
 
@@ -82,18 +88,49 @@ const AddUserDialog = ({ isOpen, onOpenChange }: AddUserDialogProps) => {
           // Don't show error to user as the auth user was created successfully
         }
 
+        setWaitingStatus('success');
         toast.success("Người dùng mới đã được thêm thành công");
-        onOpenChange(false);
-        queryClient.invalidateQueries({ queryKey: ["users"] });
-        (e.target as HTMLFormElement).reset();
+        
+        setTimeout(() => {
+          onOpenChange(false);
+          setShowWaiting(false);
+          queryClient.invalidateQueries({ queryKey: ["users"] });
+          (e.target as HTMLFormElement).reset();
+        }, 1500);
       }
     } catch (error: any) {
       console.error("Add user error:", error);
       toast.error("Có lỗi xảy ra: " + error.message);
+      setWaitingStatus('error');
     } finally {
       setIsCreatingUser(false);
     }
   };
+
+  const handleRetry = () => {
+    setShowWaiting(false);
+    setWaitingStatus('loading');
+  };
+
+  if (showWaiting) {
+    return (
+      <WaitingInterface
+        title="Đang tạo người dùng"
+        description="Vui lòng chờ trong giây lát..."
+        steps={[
+          { label: "Đang tạo tài khoản...", duration: 2000 },
+          { label: "Đang thiết lập thông tin người dùng...", duration: 1500 },
+          { label: "Hoàn tất!", duration: 500 }
+        ]}
+        status={waitingStatus}
+        onRetry={handleRetry}
+        onCancel={() => {
+          setShowWaiting(false);
+          onOpenChange(false);
+        }}
+      />
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

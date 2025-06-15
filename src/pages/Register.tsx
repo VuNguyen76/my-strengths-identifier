@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -21,6 +20,7 @@ import Footer from "@/components/layout/Footer";
 import { Facebook, Mail } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
+import EmailConfirmationLoading from "@/components/auth/EmailConfirmationLoading";
 
 const registerSchema = z.object({
   name: z.string().min(2, "Tên phải có ít nhất 2 ký tự"),
@@ -36,6 +36,8 @@ type RegisterValues = z.infer<typeof registerSchema>;
 
 const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
   const navigate = useNavigate();
 
   const form = useForm<RegisterValues>({
@@ -68,13 +70,18 @@ const Register = () => {
         return;
       }
 
+      setUserEmail(values.email);
+      setShowConfirmation(true);
       toast.success("Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản.");
-      navigate("/login");
     } catch (error) {
       toast.error("Đã xảy ra lỗi không mong muốn");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleConfirmationComplete = () => {
+    navigate("/login");
   };
 
   const handleFacebookRegister = async () => {
@@ -118,6 +125,15 @@ const Register = () => {
       setIsLoading(false);
     }
   };
+
+  if (showConfirmation) {
+    return (
+      <EmailConfirmationLoading 
+        email={userEmail}
+        onComplete={handleConfirmationComplete}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">

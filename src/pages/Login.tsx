@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -21,6 +20,7 @@ import Footer from "@/components/layout/Footer";
 import { Facebook, Mail } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
+import WaitingInterface from "@/components/ui/waiting-interface";
 
 const loginSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
@@ -31,6 +31,7 @@ type LoginValues = z.infer<typeof loginSchema>;
 
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [showWaiting, setShowWaiting] = useState(false);
   const navigate = useNavigate();
 
   const form = useForm<LoginValues>({
@@ -43,6 +44,7 @@ const Login = () => {
 
   const onSubmit = async (values: LoginValues) => {
     setIsLoading(true);
+    setShowWaiting(true);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -52,13 +54,17 @@ const Login = () => {
 
       if (error) {
         toast.error(error.message);
+        setShowWaiting(false);
         return;
       }
 
       toast.success("Đăng nhập thành công!");
-      navigate("/");
+      setTimeout(() => {
+        navigate("/");
+      }, 1500);
     } catch (error) {
       toast.error("Đã xảy ra lỗi không mong muốn");
+      setShowWaiting(false);
     } finally {
       setIsLoading(false);
     }
@@ -105,6 +111,21 @@ const Login = () => {
       setIsLoading(false);
     }
   };
+
+  if (showWaiting) {
+    return (
+      <WaitingInterface
+        title="Đang đăng nhập"
+        description="Vui lòng chờ trong giây lát..."
+        steps={[
+          { label: "Đang xác thực thông tin đăng nhập...", duration: 2000 },
+          { label: "Đang tải thông tin người dùng...", duration: 1500 },
+          { label: "Hoàn tất!", duration: 500 }
+        ]}
+        onCancel={() => setShowWaiting(false)}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
