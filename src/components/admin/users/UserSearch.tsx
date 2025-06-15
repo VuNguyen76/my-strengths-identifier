@@ -13,7 +13,7 @@ const UserSearch = ({ searchQuery, onSearchChange }: UserSearchProps) => {
       <div className="relative flex-1">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Tìm kiếm theo tên hoặc số điện thoại..."
+          placeholder="Tìm kiếm theo tên, email, số điện thoại hoặc ID..."
           className="pl-8"
           value={searchQuery}
           onChange={onSearchChange}

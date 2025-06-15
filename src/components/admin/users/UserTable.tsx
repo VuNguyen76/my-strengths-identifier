@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Edit, Trash, Shield } from "lucide-react";
+import { MoreHorizontal, Edit, Trash, Shield, User } from "lucide-react";
 
 interface User {
   id: string;
@@ -38,11 +38,14 @@ interface UserTableProps {
 
 const UserTable = ({ users, onEditUser, onDeleteUser, onChangeRole }: UserTableProps) => {
   const getRoleBadge = (role: string) => {
-    return role === 'admin' 
-      ? <Badge className="bg-purple-600">Admin</Badge>
-      : role === 'staff'
-      ? <Badge className="bg-orange-500">Staff</Badge>
-      : <Badge className="bg-blue-500">Người dùng</Badge>;
+    switch (role) {
+      case 'admin':
+        return <Badge className="bg-purple-600">Admin</Badge>;
+      case 'staff':
+        return <Badge className="bg-orange-500">Staff</Badge>;
+      default:
+        return <Badge className="bg-blue-500">Người dùng</Badge>;
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -51,12 +54,30 @@ const UserTable = ({ users, onEditUser, onDeleteUser, onChangeRole }: UserTableP
       : <Badge className="bg-gray-500">Không hoạt động</Badge>;
   };
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleDateString("vi-VN");
+    } catch {
+      return 'N/A';
+    }
+  };
+
+  const getUserInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Tên</TableHead>
+            <TableHead>Người dùng</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Số điện thoại</TableHead>
             <TableHead>Vai trò</TableHead>
@@ -69,14 +90,28 @@ const UserTable = ({ users, onEditUser, onDeleteUser, onChangeRole }: UserTableP
           {users.length > 0 ? (
             users.map((user) => (
               <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-xs font-medium text-blue-700">
+                        {getUserInitials(user.name)}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="font-medium">{user.name}</div>
+                      <div className="text-sm text-gray-500">ID: {user.id.slice(0, 8)}...</div>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="text-sm">
+                    {user.email}
+                  </div>
+                </TableCell>
                 <TableCell>{user.phone}</TableCell>
                 <TableCell>{getRoleBadge(user.role)}</TableCell>
                 <TableCell>{getStatusBadge(user.status)}</TableCell>
-                <TableCell>
-                  {new Date(user.createdAt).toLocaleDateString("vi-VN")}
-                </TableCell>
+                <TableCell>{formatDate(user.createdAt)}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -110,8 +145,11 @@ const UserTable = ({ users, onEditUser, onDeleteUser, onChangeRole }: UserTableP
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={7} className="text-center">
-                Không tìm thấy người dùng nào
+              <TableCell colSpan={7} className="text-center py-8">
+                <div className="flex flex-col items-center space-y-2">
+                  <User className="h-8 w-8 text-gray-400" />
+                  <p className="text-gray-500">Không tìm thấy người dùng nào</p>
+                </div>
               </TableCell>
             </TableRow>
           )}
