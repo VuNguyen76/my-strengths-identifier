@@ -24,9 +24,9 @@ export const useUsers = (searchQuery?: string) => {
       }
 
       // Create a map of auth users by ID for quick lookup
-      const authUserMap = new Map();
+      const authUserMap = new Map<string, any>();
       if (authUsers) {
-        authUsers.forEach(user => {
+        authUsers.forEach((user: any) => {
           authUserMap.set(user.id, user);
         });
       }
